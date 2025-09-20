@@ -1,0 +1,39 @@
+
+# Boiling water temperature in the shell [K]
+boiling_water_T_K: 450.0   # ~177°C saturation, edit as needed
+
+# Areas in m^2 and convection coefficient in W/m^2-K per segment
+pass1:
+  name: "pass 1"
+  A_rad_m2: 40.0
+  eps_gas: 0.2
+  A_conv_m2: 60.0
+  h_conv_W_m2K: 80.0
+
+rev1:
+  name: "reversal 1"
+  A_rad_m2: 20.0
+  eps_gas: 0.2
+  A_conv_m2: 30.0
+  h_conv_W_m2K: 70.0
+
+pass2:
+  name: "pass 2"
+  A_rad_m2: 35.0
+  eps_gas: 0.15
+  A_conv_m2: 55.0
+  h_conv_W_m2K: 70.0
+
+rev2:
+  name: "reversal 2"
+  A_rad_m2: 18.0
+  eps_gas: 0.15
+  A_conv_m2: 28.0
+  h_conv_W_m2K: 65.0
+
+pass3:
+  name: "pass 3"
+  A_rad_m2: 30.0
+  eps_gas: 0.1
+  A_conv_m2: 50.0
+  h_conv_W_m2K: 60.0

@@ -1,0 +1,15 @@
+global_numerics:
+  tolerances:
+    rel: 1e-6
+    abs: 1e-9
+  max_iters: 200
+  N_cells_default: 50
+property_backend:
+  backend: CoolProp
+  coolprop:
+    backend: HEOS
+defaults:
+  wall_material: "steel304"
+  fouling:
+    R_fg: 0.0
+    R_fw: 0.0
