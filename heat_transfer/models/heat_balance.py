@@ -13,19 +13,7 @@ class LocalHeatBalance:
         self, h_g: float, h_rad: float, h_w: float,
         R_fg: float, R_fw: float, Di: float, Do: float,
         Tg: float, Tsat: float, guess_Twi: float, guess_Two: float
-    ) -> tuple:
-        # Basic input validation
-        if not (isfinite(Di) and isfinite(Do) and Di > 0 and Do > 0 and Do > Di):
-            raise ValueError(f"Bad geometry: Di={Di}, Do={Do} (require 0 < Di < Do)")
-        if not isfinite(Tg) or not isfinite(Tsat):
-            raise ValueError(f"Non-finite temperatures: Tg={Tg}, Tsat={Tsat}")
-        if not isfinite(h_g) or not isfinite(h_rad) or not isfinite(h_w):
-            raise ValueError(f"Non-finite h: h_g={h_g}, h_rad={h_rad}, h_w={h_w}")
-        if h_g + h_rad <= 0 or h_w <= 0:
-            raise ValueError(f"Non-positive film coefficient: h_g+h_rad={h_g+h_rad}, h_w={h_w}")
-        if not isfinite(R_fg) or not isfinite(R_fw) or R_fg < 0 or R_fw < 0:
-            raise ValueError(f"Fouling must be finite and ≥0: R_fg={R_fg}, R_fw={R_fw}")
-
+    ) -> tuple:       
         Twi, Two = guess_Twi, guess_Two
         for _ in range(50):
             Tm = (Twi + Two) / 2.0

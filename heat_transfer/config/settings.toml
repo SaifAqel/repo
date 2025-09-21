@@ -1,0 +1,118 @@
+[inlet_gas]
+T_in_K = 900.0
+P_in_Pa = 105000.0
+m_dot_kg_s = 5.0
+[inlet_gas.composition]
+CO2 = 0.09
+H2O = 0.18
+O2  = 0.03
+N2  = 0.70
+
+[[drums]]
+id = "drum1"
+pressure_Pa = 1500000.0
+level = 0.8
+initial_water_inventory_m3 = 1.0
+[drums.geometry]
+diameter_m = 1.5
+length_m = 6.0
+[drums.geometry.nozzle_data.steam_outlet]
+Dn_m = 0.2
+[drums.geometry.nozzle_data.water_inlet]
+Dn_m = 0.15
+
+# single_tube
+[[stages]]
+type = "single_tube"
+flow = "co_current"
+[stages.geometry]
+L_m = 5.0
+Di_m = 0.032
+Do_m = 0.038
+roughness_m = 1.0e-5
+thickness_m = 0.003
+R_fg_m2K_W = 2.0e-4
+R_fw_m2K_W = 1.0e-4
+
+# reversal_chamber
+[[stages]]
+type = "reversal_chamber"
+flow = "co_current"
+[stages.geometry]
+L_eq_m = 2.0
+area_flow_m2 = 1.2
+wetted_perimeter_m = 4.8
+area_ht_per_length_m = 4.8
+[stages.correlations]
+h_gas = "churchill_bernstein"
+epsilon_gas = "smith"
+h_water_boiling = "thom"
+friction = "churchill"
+[[stages.losses]]
+element = "180deg_bend"
+K = 1.6
+[[stages.losses]]
+element = "expansion"
+K = 0.3
+[stages.fouling]
+R_fg_m2K_W = 1.5e-4
+R_fw_m2K_W = 1.0e-4
+[stages.discretization]
+N_cells = 10
+
+# tube_bank
+[[stages]]
+type = "tube_bank"
+flow = "co_current"
+[stages.geometry]
+L_m = 6.0
+Di_m = 0.038
+Do_m = 0.045
+Ntubes = 220
+pitch_m = 0.065
+arrangement = "triangular"
+roughness_m = 1.0e-5
+thickness_m = 0.0035
+frontal_width_m = 1.6
+frontal_height_m = 1.2
+[stages.correlations]
+h_gas = "gnielinski"
+epsilon_gas = "leckner"
+h_water_boiling = "chen"
+friction = "churchill"
+[[stages.losses]]
+element = "inlet_header"
+K = 0.5
+[[stages.losses]]
+element = "outlet_header"
+K = 1.0
+[stages.fouling]
+R_fg_m2K_W = 2.0e-4
+R_fw_m2K_W = 1.0e-4
+[stages.discretization]
+N_cells = 60
+
+
+
+
+
+[global_numerics.tolerances]
+rel = 1e-6
+abs = 1e-9
+
+[global_numerics]
+max_iters = 200
+N_cells_default = 50
+
+[property_backend]
+backend = "CoolProp"
+
+[property_backend.coolprop]
+backend = "HEOS"
+
+[defaults]
+wall_material = "steel304"
+
+[defaults.fouling]
+R_fg = 0.0
+R_fw = 0.0

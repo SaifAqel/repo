@@ -22,5 +22,5 @@ class SmithModel(IEpsilonModel):
 class WSGGM_SimpleModel(IEpsilonModel):
     def epsilon(self,T,P,y,Lb):
         p = (y.get("CO2",0.0)+y.get("H2O",0.0))*P
-        a = 1.0-exp(-0.3*(p*Lb)**0.5)
+        a = 1.0-exp(-0.3*abs((p*Lb)**0.5))
         return a

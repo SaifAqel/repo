@@ -7,9 +7,8 @@ from ..core.types import PlantResult, GasState
 @dataclass
 class MultiStageHEX:
     settings_path: str
-    case_path: str
     def run(self) -> PlantResult:
-        settings, case, builders = load_case(self.settings_path,self.case_path)
+        cfg, builders = load_case(self.settings_path)
         gas = builders["gas_inlet"]()
         stages = []
         Q_total = 0.0

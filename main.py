@@ -7,6 +7,7 @@ from heat_transfer.io.summary_writer import export_summary
 from heat_transfer.reports.plots import plot_profiles
 import matplotlib.pyplot as plt
 import numpy as np, warnings
+import tomllib
 
 np.seterr(all='raise')           # turn RuntimeWarnings into errors
 warnings.filterwarnings('error') # catch ComplexWarning as error
@@ -42,22 +43,19 @@ def build_case_yaml(T_in, P_in, m_dot, composition, drum_pressure, drum_geometry
     }
 
 def main():
-    settings_path = "heat_transfer/config/settings.yaml"
-    case_path = "heat_transfer/config/case_stages.yaml"
+    settings_path = "heat_transfer/config/settings.toml"
 
-    # Load YAMLs
-    with open(settings_path, "r") as f:
-        settings_yaml = yaml.safe_load(f) or {}
+    # Load TOMLs
+    with open(settings_path, "rb") as f:
+        settings_toml = tomllib.load(f) or {}
 
-    with open(case_path, "r") as f:
-        case_yaml = yaml.safe_load(f) or {}
-
-    # Output directory: optional in case YAML, else default
-    output_dir = case_yaml.get("output_dir", "outputs")
+    # Output directory: optional in case TOML, else default
+    output_dir = settings_toml.get("output_dir", "outputs")
     os.makedirs(output_dir, exist_ok=True)
 
+
     # Run model using the YAML files directly
-    runner = MultiStageHEX(settings_path, case_path)
+    runner = MultiStageHEX(settings_path)
     plant = runner.run()
 
     # Summarize

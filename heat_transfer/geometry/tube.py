@@ -1,22 +1,28 @@
 # geometry/tube.py
 from dataclasses import dataclass
 from .base import IGeometryStage
+from math import pi
+
 @dataclass
 class SingleTubeGeom(IGeometryStage):
-    L: float
-    Di: float
-    Do: float
-    roughness: float
-    thickness: float
-    R_fg: float
-    R_fw: float
+    L_m: float
+    Di_m: float
+    Do_m: float
+    roughness_m: float
+    thickness_m: float
+    R_fg_m2K_W: float
+    R_fw_m2K_W: float
+    # gas inside; water outside
+
     def length(self) -> float:
-        return self.L
+        return self.L_m
+
     def hydraulic_diameter(self) -> float:
-        return self.Di
+        return self.Di_m
+
     def flow_area(self) -> float:
-        from math import pi
-        return pi*(self.Di**2)/4.0
+        return pi * (self.Di_m**2) / 4.0
+
     def heat_transfer_area(self) -> float:
-        from math import pi
-        return pi*self.Di*self.L
+        # inner area (consistent with gas-side h_i and with TubeBank)
+        return pi * self.Di_m * self.L_m

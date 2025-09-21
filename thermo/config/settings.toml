@@ -1,81 +1,81 @@
-[species.molar_masses]        # kg/mol
-CH4=0.01604
-C2H6=0.03007
-C3H8=0.04410
-C4H10=0.05812
-H2S=0.03408
-N2=0.02802
-CO2=0.04401
-H2O=0.018015
-O2=0.031998
-Ar=0.039948
-SO2=0.06407
+    [species.molar_masses]        # kg/mol
+    CH4=0.01604
+    C2H6=0.03007
+    C3H8=0.04410
+    C4H10=0.05812
+    H2S=0.03408
+    N2=0.02802
+    CO2=0.04401
+    H2O=0.018015
+    O2=0.031998
+    Ar=0.039948
+    SO2=0.06407
 
-[species.cp_fluids_map]
-CH4="Methane"
-C2H6="Ethane"
-C3H8="Propane"
-C4H10="n-Butane"
-N2="Nitrogen"
-CO2="CarbonDioxide"
-H2O="Water"
-O2="Oxygen"
-Ar="Argon"
-SO2="SulfurDioxide"
-H2S="HydrogenSulfide"
+    [species.cp_fluids_map]
+    CH4="Methane"
+    C2H6="Ethane"
+    C3H8="Propane"
+    C4H10="n-Butane"
+    N2="Nitrogen"
+    CO2="CarbonDioxide"
+    H2O="Water"
+    O2="Oxygen"
+    Ar="Argon"
+    SO2="SulfurDioxide"
+    H2S="HydrogenSulfide"
 
-[thermo.formation_enthalpies] # kJ/mol
-CH4=-74.8
-C2H6=-84.7
-C3H8=-103.8
-C4H10=-126.1
-SO2=-296.8
-CO2=-393.5
-H2O=-285.5
+    [thermo.formation_enthalpies] # kJ/mol
+    CH4=-74.8
+    C2H6=-84.7
+    C3H8=-103.8
+    C4H10=-126.1
+    SO2=-296.8
+    CO2=-393.5
+    H2O=-285.5
 
-[thermo]
-latent_heat_H2O_kJ_per_kg=2442.0
+    [thermo]
+    latent_heat_H2O_kJ_per_kg=2442.0
 
-[stoich.O2_per_mol]
-CH4=2.0
-C2H6=3.5
-C3H8=5.0
-C4H10=6.5
-H2S=1.0
-N2=0.0
-CO2=0.0
-H2O=0.0
+    [stoich.O2_per_mol]
+    CH4=2.0
+    C2H6=3.5
+    C3H8=5.0
+    C4H10=6.5
+    H2S=1.0
+    N2=0.0
+    CO2=0.0
+    H2O=0.0
 
-[air.composition_mol]
-O2=0.2095
-N2=0.7808
-Ar=0.0093
-CO2=0.0004
-H2O=0.0
+    [air.composition_mol]
+    O2=0.2095
+    N2=0.7808
+    Ar=0.0093
+    CO2=0.0004
+    H2O=0.0
 
-[air]
-T_C=30
-P_Pa=101325
+    [air]
+    T_C=30
+    P_Pa=101325
 
-[fuel.composition_mass]
-CH4=0.80
-C2H6=0.10
-C3H8=0.04
-C4H10=0.01
-H2S=0.01
-N2=0.02
-CO2=0.01
-H2O=0.01
+    [fuel.composition_mass]
+    CH4=0.80
+    C2H6=0.10
+    C3H8=0.04
+    C4H10=0.01
+    H2S=0.01
+    N2=0.02
+    CO2=0.01
+    H2O=0.01
 
-[fuel]
-T_C=30.0
-P_Pa=101325
-mass_flow_kg_s=0.5
+    [fuel]
+    T_C=30.0
+    P_Pa=101325
+    mass_flow_kg_s=0.5
 
-[reference]
-T_ref=298.15
-ambient_T=298.15
+    [reference]
+    T_ref=298.15
+    ambient_T=298.15
 
-[operation]
-excess_air_ratio=1.1
+    [operation]
+    excess_air_ratio=1.1
 
