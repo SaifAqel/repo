@@ -1,118 +1,173 @@
-[inlet_gas]
-T_in_K = 900.0
-P_in_Pa = 105000.0
-m_dot_kg_s = 5.0
-[inlet_gas.composition]
-CO2 = 0.09
-H2O = 0.18
-O2  = 0.03
-N2  = 0.70
+[gas_side]
+mass_flow_rate = "3.0"        # [kg/s]
+inlet_temperature = "850"      # [K]
+inlet_pressure = "150000"      # [Pa]
 
-[[drums]]
-id = "drum1"
-pressure_Pa = 1500000.0
-level = 0.8
-initial_water_inventory_m3 = 1.0
-[drums.geometry]
-diameter_m = 1.5
-length_m = 6.0
-[drums.geometry.nozzle_data.steam_outlet]
-Dn_m = 0.2
-[drums.geometry.nozzle_data.water_inlet]
-Dn_m = 0.15
+[gas_side.composition]     # species = mole_fraction [-], sum=1
+CO2 = "0.12"
+H2O = "0.09"
+N2 = "0.74"
+O2 = "0.04"
+CO = "0.00"
+H2 = "0.00"
+CH4 = "0.00"
+Ar = "0.01"
 
-# single_tube
-[[stages]]
-type = "single_tube"
-flow = "co_current"
-[stages.geometry]
-L_m = 5.0
-Di_m = 0.032
-Do_m = 0.038
-roughness_m = 1.0e-5
-thickness_m = 0.003
-R_fg_m2K_W = 2.0e-4
-R_fw_m2K_W = 1.0e-4
+[water_side]
+mass_flow_rate = "2.5"         # [kg/s]
+inlet_temperature = "330"       # [K]
+outlet_temperature = "370"      # [K]
+pressure = "300000"             # [Pa]
 
-# reversal_chamber
-[[stages]]
-type = "reversal_chamber"
-flow = "co_current"
-[stages.geometry]
-L_eq_m = 2.0
-area_flow_m2 = 1.2
-wetted_perimeter_m = 4.8
-area_ht_per_length_m = 4.8
-[stages.correlations]
-h_gas = "churchill_bernstein"
-epsilon_gas = "smith"
-h_water_boiling = "thom"
-friction = "churchill"
-[[stages.losses]]
-element = "180deg_bend"
-K = 1.6
-[[stages.losses]]
-element = "expansion"
-K = 0.3
-[stages.fouling]
-R_fg_m2K_W = 1.5e-4
-R_fw_m2K_W = 1.0e-4
-[stages.discretization]
-N_cells = 10
+[water_side.composition]   # leave empty for pure water
+# NaCl = ""
+# CaCO3 = ""
+# SiO2 = ""
 
-# tube_bank
-[[stages]]
-type = "tube_bank"
-flow = "co_current"
-[stages.geometry]
-L_m = 6.0
-Di_m = 0.038
-Do_m = 0.045
-Ntubes = 220
-pitch_m = 0.065
-arrangement = "triangular"
-roughness_m = 1.0e-5
-thickness_m = 0.0035
-frontal_width_m = 1.6
-frontal_height_m = 1.2
-[stages.correlations]
-h_gas = "gnielinski"
-epsilon_gas = "leckner"
-h_water_boiling = "chen"
-friction = "churchill"
-[[stages.losses]]
-element = "inlet_header"
-K = 0.5
-[[stages.losses]]
-element = "outlet_header"
-K = 1.0
-[stages.fouling]
-R_fg_m2K_W = 2.0e-4
-R_fw_m2K_W = 1.0e-4
-[stages.discretization]
-N_cells = 60
+[environment]
+ambient_temperature = "300"             # [K]
+radiative_temperature = "300"           # Trad,∞ [K]
+external_emissivity = "0.85"            # [-]
+external_h = "8"                        # [W/(m^2·K)]
+radiation_view_factor_external = "1.0"  # [-]
 
+# ---------- STAGES ----------
 
+[stages.drum.geometry]
+inner_diameter = "1.2"        # [m]
+inner_length = "3.0"          # [m]
+[stages.drum.geometry.wall.properties]
+thickness = "0.02"            # [m]
+conductivity = "45"           # [W/(m·K)]
 
+[stages.drum.surfaces.inner]
+roughness = "0.00002"         # [m]
+emissivity = "0.80"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
 
+[stages.drum.surfaces.outer]
+roughness = "0.00002"         # [m]
+emissivity = "0.85"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
 
-[global_numerics.tolerances]
-rel = 1e-6
-abs = 1e-9
+[stages.pass1.geometry]
+inner_diameter = "0.019"      # tube ID [m]
+inner_length = "12.0"         # flow length [m]
+number_of_tubes = "120"       # [-]
+layout = "triangular"         # ['triangular'|'square']
+pitch = "0.029"               # center-to-center [m]
+[stages.pass1.geometry.wall.properties]
+thickness = "0.002"           # tube wall [m]
+conductivity = "16"           # tube wall k [W/(m·K)]
 
-[global_numerics]
-max_iters = 200
-N_cells_default = 50
+[stages.pass1.surfaces.inner]
+roughness = "0.000015"        # tube ID roughness [m]
+emissivity = "0.30"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
 
-[property_backend]
-backend = "CoolProp"
+[stages.pass1.surfaces.outer]
+roughness = "0.000015"        # tube OD roughness [m]
+emissivity = "0.80"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
 
-[property_backend.coolprop]
-backend = "HEOS"
+[stages.reversal1.geometry]
+inner_diameter = "0.80"       # [m]
+inner_length = "1.0"          # [m]
+[stages.reversal1.geometry.wall.properties]
+thickness = "0.012"           # [m]
+conductivity = "45"           # [W/(m·K)]
 
-[defaults]
-wall_material = "steel304"
+[stages.reversal1.nozzles.inlet]
+diameter = "0.40"             # [m]
+length = "0.50"               # [m]
 
-[defaults.fouling]
-R_fg = 0.0
-R_fw = 0.0
+[stages.reversal1.nozzles.outlet]
+diameter = "0.40"             # [m]
+length = "0.50"               # [m]
+
+[stages.reversal1.surfaces.inner]
+roughness = "0.00002"         # [m]
+emissivity = "0.80"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
+
+[stages.reversal1.surfaces.outer]
+roughness = "0.00002"         # [m]
+emissivity = "0.85"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
+
+[stages.pass2.geometry]
+inner_diameter = "0.019"      # tube ID [m]
+inner_length = "12.0"         # flow length [m]
+number_of_tubes = "120"       # [-]
+layout = "triangular"         # ['triangular'|'square']
+pitch = "0.029"               # [m]
+[stages.pass2.geometry.wall.properties]
+thickness = "0.002"           # [m]
+conductivity = "16"           # [W/(m·K)]
+
+[stages.pass2.surfaces.inner]
+roughness = "0.000015"        # [m]
+emissivity = "0.30"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
+
+[stages.pass2.surfaces.outer]
+roughness = "0.000015"        # [m]
+emissivity = "0.80"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
+
+[stages.reversal2.geometry]
+inner_diameter = "0.80"       # [m]
+inner_length = "1.0"          # [m]
+[stages.reversal2.geometry.wall.properties]
+thickness = "0.012"           # [m]
+conductivity = "45"           # [W/(m·K)]
+
+[stages.reversal2.nozzles.inlet]
+diameter = "0.40"             # [m]
+length = "0.50"               # [m]
+
+[stages.reversal2.nozzles.outlet]
+diameter = "0.40"             # [m]
+length = "0.50"               # [m]
+
+[stages.reversal2.surfaces.inner]
+roughness = "0.00002"         # [m]
+emissivity = "0.80"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
+
+[stages.reversal2.surfaces.outer]
+roughness = "0.00002"         # [m]
+emissivity = "0.85"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
+
+[stages.pass3.geometry]
+inner_diameter = "0.019"      # tube ID [m]
+inner_length = "12.0"         # flow length [m]
+number_of_tubes = "120"       # [-]
+layout = "triangular"         # ['triangular'|'square']
+pitch = "0.029"               # [m]
+[stages.pass3.geometry.wall.properties]
+thickness = "0.002"           # [m]
+conductivity = "16"           # [W/(m·K)]
+
+[stages.pass3.surfaces.inner]
+roughness = "0.000015"        # [m]
+emissivity = "0.30"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]
+
+[stages.pass3.surfaces.outer]
+roughness = "0.000015"        # [m]
+emissivity = "0.80"           # [-]
+fouling_thickness = "0.0001"  # [m]
+fouling_conductivity = "0.20" # [W/(m·K)]

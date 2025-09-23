@@ -1,94 +1,339 @@
-# pint + TOML loader that returns your boiler config with SI units on every value,
-# including dimensionless. Mirrors your Settings example.
-
+# schema.py
 from __future__ import annotations
-from typing import Dict, Any, List
-import tomllib, pathlib
-from thermo.core.units import ureg, Q_  # same import style you used
 
-def _q1(x: float) -> Any:
-    return Q_(x, "1")
+from dataclasses import dataclass
+from typing import Dict, Any, Mapping, Optional, Tuple
+import math
+import fnmatch
 
-def load_boiler_config(path: str) -> Dict[str, Any]:
-    s = tomllib.loads(pathlib.Path(path).read_text())
+try:
+    import tomllib  # Python 3.11+
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib  # type: ignore
 
-    # inlet_gas
-    inlet_gas = {
-        "T_in": Q_(s["inlet_gas"]["T_in_K"], "K"),
-        "P_in": Q_(s["inlet_gas"]["P_in_Pa"], "Pa"),
-        "m_dot": Q_(s["inlet_gas"]["m_dot_kg_s"], "kg/s"),
-        "composition": {k: _q1(v) for k, v in s["inlet_gas"]["composition"].items()},
-    }
+from common.units import ureg, Q_
 
-    # drums
-    drums: List[Dict[str, Any]] = []
-    for d in s["drums"]:
-        drums.append({
-            "id": d["id"],
-            "pressure": Q_(d["pressure_Pa"], "Pa"),
-            "level": _q1(d["level"]),
-            "geometry": {
-                "diameter": Q_(d["geometry"]["diameter_m"], "m"),
-                "length": Q_(d["geometry"]["length_m"], "m"),
-                "nozzle_data": {
-                    "steam_outlet": {"Dn": Q_(d["geometry"]["nozzle_data"]["steam_outlet"]["Dn_m"], "m")},
-                    "water_inlet": {"Dn": Q_(d["geometry"]["nozzle_data"]["water_inlet"]["Dn_m"], "m")},
-                },
-            },
-            "initial_water_inventory": Q_(d["initial_water_inventory_m3"], "m^3"),
-        })
 
-    # stages
-    stages: List[Dict[str, Any]] = []
-    for st in s["stages"]:
-        base = {
-            "type": st["type"],
-            "flow": st["flow"],
-            "correlations": st["correlations"],
-            "losses": [{"element": L["element"], "K": _q1(L["K"])} for L in st.get("losses", [])],
-            "fouling": {
-                "R_fg": Q_(st["fouling"]["R_fg_m2K_W"], "m^2*K/W"),
-                "R_fw": Q_(st["fouling"]["R_fw_m2K_W"], "m^2*K/W"),
-            },
-            "discretization": {"N_cells": _q1(st["discretization"]["N_cells"])},
-        }
+def _to_float(v: Any) -> float:
+    # No validation. Best-effort numeric cast.
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        return float(v.strip())
+    # Fallback for types like Decimal
+    return float(v)
 
-        geo = st["geometry"]
-        if st["type"] == "tube_bank":
-            geometry = {
-                "L": Q_(geo["L_m"], "m"),
-                "Di": Q_(geo["Di_m"], "m"),
-                "Do": Q_(geo["Do_m"], "m"),
-                "Ntubes": _q1(geo["Ntubes"]),
-                "pitch": Q_(geo["pitch_m"], "m"),
-                "arrangement": geo["arrangement"],
-                "roughness": Q_(geo["roughness_m"], "m"),
-                "thickness": Q_(geo["thickness_m"], "m"),
-                "frontal_width": Q_(geo["frontal_width_m"], "m"),
-                "frontal_height": Q_(geo["frontal_height_m"], "m"),
-            }
-        elif st["type"] == "reversal_chamber":
-            geometry = {
-                "L_eq": Q_(geo["L_eq_m"], "m"),
-                "area_flow": Q_(geo["area_flow_m2"], "m^2"),
-                "wetted_perimeter": Q_(geo["wetted_perimeter_m"], "m"),
-                "area_ht_per_length": Q_(geo["area_ht_per_length_m"], "m"),  # A_ht / L
-            }
-        elif st["type"] == "single_tube":
-            geometry = {
-                "L": Q_(geo["L_m"], "m"),
-                "Di": Q_(geo["Di_m"], "m"),
-                "Do": Q_(geo["Do_m"], "m"),
-                "roughness": Q_(geo["roughness_m"], "m"),
-                "thickness": Q_(geo["thickness_m"], "m"),
-            }
+
+def _quantity(v: Any, unit: str) -> Q_:
+    return ureg.Quantity(_to_float(v), unit)
+
+
+# -------------------------
+# Data Model (mirrors TOML)
+# -------------------------
+@dataclass
+class Wall:
+    thickness: Q_
+    conductivity: Q_
+
+
+@dataclass
+class Surface:
+    roughness: Q_
+    emissivity: Q_
+    fouling_thickness: Q_
+    fouling_conductivity: Q_
+
+
+@dataclass
+class Surfaces:
+    inner: Surface
+    outer: Surface
+
+
+@dataclass
+class DrumGeometry:
+    inner_diameter: Q_
+    inner_length: Q_
+    wall: Wall
+
+
+@dataclass
+class PassGeometry:
+    inner_diameter: Q_
+    inner_length: Q_
+    number_of_tubes: Q_
+    layout: str  # keep as string; not a quantity
+    pitch: Q_
+    wall: Wall
+
+
+@dataclass
+class ReversalGeometry:
+    inner_diameter: Q_
+    inner_length: Q_
+    wall: Wall
+
+
+@dataclass
+class Nozzle:
+    diameter: Q_
+    length: Q_
+
+
+@dataclass
+class ReversalNozzles:
+    inlet: Nozzle
+    outlet: Nozzle
+
+
+@dataclass
+class Drum:
+    geometry: DrumGeometry
+    surfaces: Surfaces
+
+
+@dataclass
+class Pass:
+    geometry: PassGeometry
+    surfaces: Surfaces
+
+
+@dataclass
+class Reversal:
+    geometry: ReversalGeometry
+    nozzles: ReversalNozzles
+    surfaces: Surfaces
+
+
+@dataclass
+class Stages:
+    drum: Drum
+    pass1: Pass
+    reversal1: Reversal
+    pass2: Pass
+    reversal2: Reversal
+    pass3: Pass
+
+
+@dataclass
+class GasSide:
+    mass_flow_rate: Q_
+    inlet_temperature: Q_
+    inlet_pressure: Q_
+    composition: Dict[str, Q_]
+
+
+@dataclass
+class WaterSide:
+    mass_flow_rate: Q_
+    inlet_temperature: Q_
+    outlet_temperature: Q_
+    pressure: Q_
+    composition: Dict[str, Q_]
+
+
+@dataclass
+class Environment:
+    ambient_temperature: Q_
+    radiative_temperature: Q_
+    external_emissivity: Q_
+    external_h: Q_
+    radiation_view_factor_external: Q_
+
+
+@dataclass
+class Config:
+    gas_side: GasSide
+    water_side: WaterSide
+    environment: Environment
+    stages: Stages
+
+
+# -------------------------
+# Loader
+# -------------------------
+def _dot_join(parent: Optional[str], key: str) -> str:
+    return key if not parent else f"{parent}.{key}"
+
+
+def _resolve_unit(path: str, unit_map: Mapping[str, str]) -> Optional[str]:
+    # Exact match first
+    if path in unit_map:
+        return unit_map[path]
+    # Wildcard patterns
+    for pattern, unit in unit_map.items():
+        if "*" in pattern or "?" in pattern or "[" in pattern:
+            if fnmatch.fnmatch(path, pattern):
+                return unit
+    return None
+
+
+def _map_leaf_as_quantity(
+    path: str, value: Any, unit_map: Mapping[str, str]
+) -> Any:
+    unit = _resolve_unit(path, unit_map)
+    if unit is None:
+        return value
+    return _quantity(value, unit)
+
+
+def _load_wall(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Wall:
+    return Wall(
+        thickness=_map_leaf_as_quantity(f"{base}.thickness", d["thickness"], um),
+        conductivity=_map_leaf_as_quantity(f"{base}.conductivity", d["conductivity"], um),
+    )
+
+
+def _load_surface(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Surface:
+    return Surface(
+        roughness=_map_leaf_as_quantity(f"{base}.roughness", d["roughness"], um),
+        emissivity=_map_leaf_as_quantity(f"{base}.emissivity", d["emissivity"], um),
+        fouling_thickness=_map_leaf_as_quantity(f"{base}.fouling_thickness", d["fouling_thickness"], um),
+        fouling_conductivity=_map_leaf_as_quantity(f"{base}.fouling_conductivity", d["fouling_conductivity"], um),
+    )
+
+
+def _load_surfaces(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Surfaces:
+    return Surfaces(
+        inner=_load_surface(d["inner"], f"{base}.inner", um),
+        outer=_load_surface(d["outer"], f"{base}.outer", um),
+    )
+
+
+def _load_drum_geometry(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> DrumGeometry:
+    return DrumGeometry(
+        inner_diameter=_map_leaf_as_quantity(f"{base}.inner_diameter", d["inner_diameter"], um),
+        inner_length=_map_leaf_as_quantity(f"{base}.inner_length", d["inner_length"], um),
+        wall=_load_wall(d["wall"]["properties"], f"{base}.wall.properties", um),
+    )
+
+
+def _load_pass_geometry(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> PassGeometry:
+    return PassGeometry(
+        inner_diameter=_map_leaf_as_quantity(f"{base}.inner_diameter", d["inner_diameter"], um),
+        inner_length=_map_leaf_as_quantity(f"{base}.inner_length", d["inner_length"], um),
+        number_of_tubes=_map_leaf_as_quantity(f"{base}.number_of_tubes", d["number_of_tubes"], um),
+        layout=str(d["layout"]),
+        pitch=_map_leaf_as_quantity(f"{base}.pitch", d["pitch"], um),
+        wall=_load_wall(d["wall"]["properties"], f"{base}.wall.properties", um),
+    )
+
+
+def _load_reversal_geometry(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> ReversalGeometry:
+    return ReversalGeometry(
+        inner_diameter=_map_leaf_as_quantity(f"{base}.inner_diameter", d["inner_diameter"], um),
+        inner_length=_map_leaf_as_quantity(f"{base}.inner_length", d["inner_length"], um),
+        wall=_load_wall(d["wall"]["properties"], f"{base}.wall.properties", um),
+    )
+
+
+def _load_nozzle(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Nozzle:
+    return Nozzle(
+        diameter=_map_leaf_as_quantity(f"{base}.diameter", d["diameter"], um),
+        length=_map_leaf_as_quantity(f"{base}.length", d["length"], um),
+    )
+
+
+def _load_reversal_nozzles(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> ReversalNozzles:
+    return ReversalNozzles(
+        inlet=_load_nozzle(d["inlet"], f"{base}.inlet", um),
+        outlet=_load_nozzle(d["outlet"], f"{base}.outlet", um),
+    )
+
+
+def _load_drum(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Drum:
+    return Drum(
+        geometry=_load_drum_geometry(d["geometry"], f"{base}.geometry", um),
+        surfaces=_load_surfaces(d["surfaces"], f"{base}.surfaces", um),
+    )
+
+
+def _load_pass(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Pass:
+    return Pass(
+        geometry=_load_pass_geometry(d["geometry"], f"{base}.geometry", um),
+        surfaces=_load_surfaces(d["surfaces"], f"{base}.surfaces", um),
+    )
+
+
+def _load_reversal(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Reversal:
+    return Reversal(
+        geometry=_load_reversal_geometry(d["geometry"], f"{base}.geometry", um),
+        nozzles=_load_reversal_nozzles(d["nozzles"], f"{base}.nozzles", um),
+        surfaces=_load_surfaces(d["surfaces"], f"{base}.surfaces", um),
+    )
+
+
+def _load_composition(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Dict[str, Q_]:
+    out: Dict[str, Q_] = {}
+    for k, v in d.items():
+        path = f"{base}.{k}"
+        out[k] = _map_leaf_as_quantity(path, v, um)
+    return out
+
+
+def _load_gas_side(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> GasSide:
+    return GasSide(
+        mass_flow_rate=_map_leaf_as_quantity(f"{base}.mass_flow_rate", d["mass_flow_rate"], um),
+        inlet_temperature=_map_leaf_as_quantity(f"{base}.inlet_temperature", d["inlet_temperature"], um),
+        inlet_pressure=_map_leaf_as_quantity(f"{base}.inlet_pressure", d["inlet_pressure"], um),
+        composition=_load_composition(d.get("composition", {}), f"{base}.composition", um),
+    )
+
+
+def _load_water_side(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> WaterSide:
+    return WaterSide(
+        mass_flow_rate=_map_leaf_as_quantity(f"{base}.mass_flow_rate", d["mass_flow_rate"], um),
+        inlet_temperature=_map_leaf_as_quantity(f"{base}.inlet_temperature", d["inlet_temperature"], um),
+        outlet_temperature=_map_leaf_as_quantity(f"{base}.outlet_temperature", d["outlet_temperature"], um),
+        pressure=_map_leaf_as_quantity(f"{base}.pressure", d["pressure"], um),
+        composition=_load_composition(d.get("composition", {}), f"{base}.composition", um),
+    )
+
+
+def _load_environment(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Environment:
+    return Environment(
+        ambient_temperature=_map_leaf_as_quantity(f"{base}.ambient_temperature", d["ambient_temperature"], um),
+        radiative_temperature=_map_leaf_as_quantity(f"{base}.radiative_temperature", d["radiative_temperature"], um),
+        external_emissivity=_map_leaf_as_quantity(f"{base}.external_emissivity", d["external_emissivity"], um),
+        external_h=_map_leaf_as_quantity(f"{base}.external_h", d["external_h"], um),
+        radiation_view_factor_external=_map_leaf_as_quantity(f"{base}.radiation_view_factor_external", d["radiation_view_factor_external"], um),
+    )
+
+
+def _load_stages(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Stages:
+    return Stages(
+        drum=_load_drum(d["drum"], f"{base}.drum", um),
+        pass1=_load_pass(d["pass1"], f"{base}.pass1", um),
+        reversal1=_load_reversal(d["reversal1"], f"{base}.reversal1", um),
+        pass2=_load_pass(d["pass2"], f"{base}.pass2", um),
+        reversal2=_load_reversal(d["reversal2"], f"{base}.reversal2", um),
+        pass3=_load_pass(d["pass3"], f"{base}.pass3", um),
+    )
+
+
+def _flatten_units(d: Mapping[str, Any], prefix: Optional[str] = None) -> Dict[str, str]:
+    flat: Dict[str, str] = {}
+    for k, v in d.items():
+        path = _dot_join(prefix, k)
+        if isinstance(v, dict):
+            flat.update(_flatten_units(v, path))
         else:
-            raise ValueError(f"Unknown stage type: {st['type']}")
+            flat[path] = str(v)
+    return flat
 
-        stages.append({**base, "geometry": geometry})
 
-    return {
-        "inlet_gas": inlet_gas,
-        "drums": drums,
-        "stages": stages,
-    }
+def load_config(config_path: str, units_path: str) -> Config:
+    with open(config_path, "rb") as f:
+        config_data = tomllib.load(f)
+    with open(units_path, "rb") as f:
+        units_data = tomllib.load(f)
+
+    unit_map = _flatten_units(units_data)
+
+    return Config(
+        gas_side=_load_gas_side(config_data["gas_side"], "gas_side", unit_map),
+        water_side=_load_water_side(config_data["water_side"], "water_side", unit_map),
+        environment=_load_environment(config_data["environment"], "environment", unit_map),
+        stages=_load_stages(config_data["stages"], "stages", unit_map),
+    )

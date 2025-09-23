@@ -1,4 +1,4 @@
-from .units import ureg, Q_
+from common.units import ureg, Q_
 
 def sensible_heat(mass_flow, cp_mass, inlet_T, T_ref):
     # Expect: mass_flow [kg/s], cp_mass [kJ/(kg*K)] or [J/(kg*K)], temps [K]

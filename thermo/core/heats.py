@@ -1,6 +1,6 @@
 from typing import Dict
 from thermo.core.species import parse_CH
-from .units import ureg, Q_
+from common.units import ureg, Q_
 
 def compute_LHV_HHV(
     mole_fractions: Dict[str, float],   # dimensionless

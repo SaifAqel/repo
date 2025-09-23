@@ -1,4 +1,4 @@
-from thermo.core.units import ureg, Q_
+from common.units import ureg, Q_
 from thermo.core.heat_capacity import MixtureCp
 
 class AdiabaticFlameTemperature:

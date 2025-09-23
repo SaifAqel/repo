@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 import pint
 from .composition import Composition, mix_molar_mass
-from .units import ureg, Q_
+from common.units import ureg, Q_
 
 @dataclass(frozen=True)
 class GasStream:

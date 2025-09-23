@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Any
-from thermo.core.units import Q_
+from common.units import Q_
 
 @dataclass(frozen=True)
 class Results:

@@ -1,7 +1,7 @@
 import CoolProp.CoolProp as CP
 from scipy.integrate import quad
 from typing import Dict
-from .units import ureg, Q_
+from common.units import ureg, Q_
 
 
 class MixtureCp:

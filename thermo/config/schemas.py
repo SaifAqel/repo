@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict
 import tomllib, pathlib
-from thermo.core.units import ureg, Q_
+from common.units import ureg, Q_
 import pint
 
 @dataclass(frozen=True)

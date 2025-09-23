@@ -1,0 +1,130 @@
+# Cantera YAML scaffold for: CO2, H2O, SO2, O2, N2, Ar
+# Fill thermo and transport parameters later.
+
+units:
+  length: cm
+  time: s
+  quantity: mol
+  activation-energy: cal/mol
+
+phases:
+- name: gas_mix
+  thermo: ideal-gas              # density from EOS at T,P
+  transport: mixture-averaged    # viscosity, conductivity
+  kinetics: none                 # nonreacting mixture
+  elements: [C, H, O, N, S, Ar]
+  species: [CO2, H2O, SO2, O2, N2, Ar]
+  state:
+    T: 300 K
+    P: 1 atm
+    X: "CO2:0.0, H2O:0.0, SO2:0.0, O2:0.0, N2:0.0, Ar:0.0"
+
+species:
+
+# ----------------------- CO2 -----------------------
+- name: CO2
+  composition: {C: 1, O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [FILL_CO2_LOW_1, FILL_CO2_LOW_2, FILL_CO2_LOW_3, FILL_CO2_LOW_4, FILL_CO2_LOW_5, FILL_CO2_LOW_6, FILL_CO2_LOW_7]
+    - [FILL_CO2_HIGH_1, FILL_CO2_HIGH_2, FILL_CO2_HIGH_3, FILL_CO2_HIGH_4, FILL_CO2_HIGH_5, FILL_CO2_HIGH_6, FILL_CO2_HIGH_7]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: FILL_CO2_d       # Angstrom
+    well-depth: FILL_CO2_eps   # Kelvin
+    polarizability: FILL_CO2_alpha   # Angstrom^3
+    rotational-relaxation: FILL_CO2_zrot
+    acentric-factor: FILL_CO2_omega
+
+# ----------------------- H2O -----------------------
+- name: H2O
+  composition: {H: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [FILL_H2O_LOW_1, FILL_H2O_LOW_2, FILL_H2O_LOW_3, FILL_H2O_LOW_4, FILL_H2O_LOW_5, FILL_H2O_LOW_6, FILL_H2O_LOW_7]
+    - [FILL_H2O_HIGH_1, FILL_H2O_HIGH_2, FILL_H2O_HIGH_3, FILL_H2O_HIGH_4, FILL_H2O_HIGH_5, FILL_H2O_HIGH_6, FILL_H2O_HIGH_7]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: FILL_H2O_d
+    well-depth: FILL_H2O_eps
+    polarizability: FILL_H2O_alpha
+    rotational-relaxation: FILL_H2O_zrot
+    acentric-factor: FILL_H2O_omega
+
+# ----------------------- SO2 -----------------------
+- name: SO2
+  composition: {S: 1, O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [FILL_SO2_LOW_1, FILL_SO2_LOW_2, FILL_SO2_LOW_3, FILL_SO2_LOW_4, FILL_SO2_LOW_5, FILL_SO2_LOW_6, FILL_SO2_LOW_7]
+    - [FILL_SO2_HIGH_1, FILL_SO2_HIGH_2, FILL_SO2_HIGH_3, FILL_SO2_HIGH_4, FILL_SO2_HIGH_5, FILL_SO2_HIGH_6, FILL_SO2_HIGH_7]
+  transport:
+    model: gas
+    geometry: bent
+    diameter: FILL_SO2_d
+    well-depth: FILL_SO2_eps
+    polarizability: FILL_SO2_alpha
+    rotational-relaxation: FILL_SO2_zrot
+    acentric-factor: FILL_SO2_omega
+
+# ----------------------- O2 -----------------------
+- name: O2
+  composition: {O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [FILL_O2_LOW_1, FILL_O2_LOW_2, FILL_O2_LOW_3, FILL_O2_LOW_4, FILL_O2_LOW_5, FILL_O2_LOW_6, FILL_O2_LOW_7]
+    - [FILL_O2_HIGH_1, FILL_O2_HIGH_2, FILL_O2_HIGH_3, FILL_O2_HIGH_4, FILL_O2_HIGH_5, FILL_O2_HIGH_6, FILL_O2_HIGH_7]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: FILL_O2_d
+    well-depth: FILL_O2_eps
+    polarizability: FILL_O2_alpha
+    rotational-relaxation: FILL_O2_zrot
+    acentric-factor: FILL_O2_omega
+
+# ----------------------- N2 -----------------------
+- name: N2
+  composition: {N: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [FILL_N2_LOW_1, FILL_N2_LOW_2, FILL_N2_LOW_3, FILL_N2_LOW_4, FILL_N2_LOW_5, FILL_N2_LOW_6, FILL_N2_LOW_7]
+    - [FILL_N2_HIGH_1, FILL_N2_HIGH_2, FILL_N2_HIGH_3, FILL_N2_HIGH_4, FILL_N2_HIGH_5, FILL_N2_HIGH_6, FILL_N2_HIGH_7]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: FILL_N2_d
+    well-depth: FILL_N2_eps
+    polarizability: FILL_N2_alpha
+    rotational-relaxation: FILL_N2_zrot
+    acentric-factor: FILL_N2_omega
+
+# ----------------------- Ar -----------------------
+- name: Ar
+  composition: {Ar: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [FILL_Ar_LOW_1, FILL_Ar_LOW_2, FILL_Ar_LOW_3, FILL_Ar_LOW_4, FILL_Ar_LOW_5, FILL_Ar_LOW_6, FILL_Ar_LOW_7]
+    - [FILL_Ar_HIGH_1, FILL_Ar_HIGH_2, FILL_Ar_HIGH_3, FILL_Ar_HIGH_4, FILL_Ar_HIGH_5, FILL_Ar_HIGH_6, FILL_Ar_HIGH_7]
+  transport:
+    model: gas
+    geometry: atom
+    diameter: FILL_Ar_d
+    well-depth: FILL_Ar_eps
+    polarizability: FILL_Ar_alpha
+    rotational-relaxation: 0.0
+    acentric-factor: FILL_Ar_omega
