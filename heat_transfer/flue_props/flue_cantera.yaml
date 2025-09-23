@@ -17,7 +17,7 @@ phases:
   state:
     T: 300 K
     P: 1 atm
-    X: "CO2:0.0, H2O:0.0, SO2:0.0, O2:0.0, N2:0.0, Ar:0.0"
+    X: "N2:1.0"
 
 species:
 
@@ -28,16 +28,16 @@ species:
     model: NASA7
     temperature-ranges: [200.0, 1000.0, 6000.0]
     data:
-    - [FILL_CO2_LOW_1, FILL_CO2_LOW_2, FILL_CO2_LOW_3, FILL_CO2_LOW_4, FILL_CO2_LOW_5, FILL_CO2_LOW_6, FILL_CO2_LOW_7]
-    - [FILL_CO2_HIGH_1, FILL_CO2_HIGH_2, FILL_CO2_HIGH_3, FILL_CO2_HIGH_4, FILL_CO2_HIGH_5, FILL_CO2_HIGH_6, FILL_CO2_HIGH_7]
+    - [2.35677352, 8.98459677e-03, -7.12356269e-06, 2.45919022e-09, -1.43699548e-13, -4.83719697e+04, 9.90105222]
+    - [4.63659493, 2.74131944e-03, -4.95865179e-07, 1.52446356e-10, -6.35333361e-15, -4.83719697e+04, -1.93489550]
   transport:
     model: gas
     geometry: linear
-    diameter: FILL_CO2_d       # Angstrom
-    well-depth: FILL_CO2_eps   # Kelvin
-    polarizability: FILL_CO2_alpha   # Angstrom^3
-    rotational-relaxation: FILL_CO2_zrot
-    acentric-factor: FILL_CO2_omega
+    diameter: 3.763            
+    well-depth: 244.0        
+    polarizability: 2.65    
+    rotational-relaxation: 2.6
+    acentric-factor: 0.2236
 
 # ----------------------- H2O -----------------------
 - name: H2O
@@ -46,16 +46,16 @@ species:
     model: NASA7
     temperature-ranges: [200.0, 1000.0, 6000.0]
     data:
-    - [FILL_H2O_LOW_1, FILL_H2O_LOW_2, FILL_H2O_LOW_3, FILL_H2O_LOW_4, FILL_H2O_LOW_5, FILL_H2O_LOW_6, FILL_H2O_LOW_7]
-    - [FILL_H2O_HIGH_1, FILL_H2O_HIGH_2, FILL_H2O_HIGH_3, FILL_H2O_HIGH_4, FILL_H2O_HIGH_5, FILL_H2O_HIGH_6, FILL_H2O_HIGH_7]
+    - [4.19864056, -2.03643410e-03, 6.52040211e-06, -5.48797062e-09, 1.77197817e-12, -3.02937267e+04, -8.49032208e-01]
+    - [3.03399249, 2.17691804e-03, -1.64072518e-07, -9.70419870e-11, 1.68200992e-14, -3.00042971e+04, 4.96677010]
   transport:
     model: gas
     geometry: nonlinear
-    diameter: FILL_H2O_d
-    well-depth: FILL_H2O_eps
-    polarizability: FILL_H2O_alpha
-    rotational-relaxation: FILL_H2O_zrot
-    acentric-factor: FILL_H2O_omega
+    diameter: 2.641       
+    well-depth: 809.1     
+    polarizability: 0.0   
+    rotational-relaxation: 4.0
+    acentric-factor: 0.344
 
 # ----------------------- SO2 -----------------------
 - name: SO2
@@ -64,16 +64,16 @@ species:
     model: NASA7
     temperature-ranges: [200.0, 1000.0, 6000.0]
     data:
-    - [FILL_SO2_LOW_1, FILL_SO2_LOW_2, FILL_SO2_LOW_3, FILL_SO2_LOW_4, FILL_SO2_LOW_5, FILL_SO2_LOW_6, FILL_SO2_LOW_7]
-    - [FILL_SO2_HIGH_1, FILL_SO2_HIGH_2, FILL_SO2_HIGH_3, FILL_SO2_HIGH_4, FILL_SO2_HIGH_5, FILL_SO2_HIGH_6, FILL_SO2_HIGH_7]
+    - [4.88475400, -2.17239500e-03, 6.74313500e-06, -5.71253000e-09, 1.67180000e-12, -3.05629240e+04, 2.29262800]
+    - [4.88475400, -2.17239500e-03, 6.74313500e-06, -5.71253000e-09, 1.67180000e-12, -3.05629240e+04, 2.29262800]
   transport:
     model: gas
-    geometry: bent
-    diameter: FILL_SO2_d
-    well-depth: FILL_SO2_eps
-    polarizability: FILL_SO2_alpha
-    rotational-relaxation: FILL_SO2_zrot
-    acentric-factor: FILL_SO2_omega
+    geometry: nonlinear
+    diameter: 4.11        
+    well-depth: 335.0     
+    polarizability: 0.0   
+    rotational-relaxation: 1.0
+    acentric-factor: 0.256
 
 # ----------------------- O2 -----------------------
 - name: O2
@@ -82,16 +82,16 @@ species:
     model: NASA7
     temperature-ranges: [200.0, 1000.0, 6000.0]
     data:
-    - [FILL_O2_LOW_1, FILL_O2_LOW_2, FILL_O2_LOW_3, FILL_O2_LOW_4, FILL_O2_LOW_5, FILL_O2_LOW_6, FILL_O2_LOW_7]
-    - [FILL_O2_HIGH_1, FILL_O2_HIGH_2, FILL_O2_HIGH_3, FILL_O2_HIGH_4, FILL_O2_HIGH_5, FILL_O2_HIGH_6, FILL_O2_HIGH_7]
+    - [3.78245636, -2.99673416e-03, 9.84730201e-06, -9.68129509e-09, 3.24372837e-12, -1.06394356e+03, 3.65767573]
+    - [3.28253784, 1.48308754e-03, -7.57966669e-07, 2.09470555e-10, -2.16717794e-14, -1.08845772e+03, 5.45323129]
   transport:
     model: gas
     geometry: linear
-    diameter: FILL_O2_d
-    well-depth: FILL_O2_eps
-    polarizability: FILL_O2_alpha
-    rotational-relaxation: FILL_O2_zrot
-    acentric-factor: FILL_O2_omega
+    diameter: 3.458       
+    well-depth: 107.4     
+    polarizability: 1.6   
+    rotational-relaxation: 3.8
+    acentric-factor: 0.0222
 
 # ----------------------- N2 -----------------------
 - name: N2
@@ -100,16 +100,16 @@ species:
     model: NASA7
     temperature-ranges: [200.0, 1000.0, 6000.0]
     data:
-    - [FILL_N2_LOW_1, FILL_N2_LOW_2, FILL_N2_LOW_3, FILL_N2_LOW_4, FILL_N2_LOW_5, FILL_N2_LOW_6, FILL_N2_LOW_7]
-    - [FILL_N2_HIGH_1, FILL_N2_HIGH_2, FILL_N2_HIGH_3, FILL_N2_HIGH_4, FILL_N2_HIGH_5, FILL_N2_HIGH_6, FILL_N2_HIGH_7]
+    - [3.53100528, -1.23660987e-04, -5.02999433e-07, 2.43530612e-09, -1.40881235e-12, -1.04697628e+03, 2.96747468]   
+    - [2.95257626, 1.39690040e-03, -4.92631603e-07, 7.86010367e-11, -4.60755321e-15, -9.23948688e+02, 5.87188762]
   transport:
     model: gas
     geometry: linear
-    diameter: FILL_N2_d
-    well-depth: FILL_N2_eps
-    polarizability: FILL_N2_alpha
-    rotational-relaxation: FILL_N2_zrot
-    acentric-factor: FILL_N2_omega
+    diameter: 3.621
+    well-depth: 97.53
+    polarizability: 1.76
+    rotational-relaxation: 4.0
+    acentric-factor: 0.040
 
 # ----------------------- Ar -----------------------
 - name: Ar
@@ -118,13 +118,13 @@ species:
     model: NASA7
     temperature-ranges: [200.0, 1000.0, 6000.0]
     data:
-    - [FILL_Ar_LOW_1, FILL_Ar_LOW_2, FILL_Ar_LOW_3, FILL_Ar_LOW_4, FILL_Ar_LOW_5, FILL_Ar_LOW_6, FILL_Ar_LOW_7]
-    - [FILL_Ar_HIGH_1, FILL_Ar_HIGH_2, FILL_Ar_HIGH_3, FILL_Ar_HIGH_4, FILL_Ar_HIGH_5, FILL_Ar_HIGH_6, FILL_Ar_HIGH_7]
+    - [2.50000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000, -7.45375000E+02, 4.37967491]
+    - [2.50000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000, -7.45375000E+02, 4.37967491]
   transport:
     model: gas
     geometry: atom
-    diameter: FILL_Ar_d
-    well-depth: FILL_Ar_eps
-    polarizability: FILL_Ar_alpha
+    diameter: 3.330
+    well-depth: 136.5
+    polarizability: 1.641
     rotational-relaxation: 0.0
-    acentric-factor: FILL_Ar_omega
+    acentric-factor: 0.000
