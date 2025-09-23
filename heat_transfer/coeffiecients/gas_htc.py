@@ -2,8 +2,6 @@ class GasConvectiveHeatTransfer:
     def __init__(self, k, d, Re, Pr, Nu):
         self.k = k        # Thermal conductivity [W/m-K]
         self.d = d        # Characteristic length/diameter [m]
-        self.Re = Re      # Reynolds number
-        self.Pr = Pr      # Prandtl number
         self.Nu = Nu      # Nusselt number
 
     def h(self):
