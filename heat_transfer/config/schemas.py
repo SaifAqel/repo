@@ -1,16 +1,9 @@
 # schema.py
 from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import Dict, Any, Mapping, Optional, Tuple
-import math
+from typing import Dict, Any, Mapping, Optional
 import fnmatch
-
-try:
-    import tomllib  # Python 3.11+
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib  # type: ignore
-
+import tomllib
 from common.units import ureg, Q_
 
 
