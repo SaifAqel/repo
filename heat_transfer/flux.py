@@ -1,3 +1,5 @@
+from math import log, pi
+
 class WaterResistance:
     @staticmethod
     def per_area(h_boil):
@@ -10,13 +12,13 @@ class GasResistance:
 
 class WallResistance:
     @staticmethod
-    def cyl_logmean_per_area(r_i, r_o, k):
-        return (r_o - r_i) / k
+    def cyl_per_inner_area(r_i, r_o, k):
+        return log(r_o/r_i) / (2*pi*k*r_i)
 
 class FoulingResistance:
     @staticmethod
-    def per_area(r_foul):
-        return r_foul
+    def per_area(thickness, k_foul):
+        return thickness / k_foul
 
 class TotalResistance:
     @staticmethod
