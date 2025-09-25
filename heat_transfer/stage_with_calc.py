@@ -9,10 +9,26 @@ from math import pi
 class PassWithCalc(Pass):
 
     @property
-    def cross_section_inner_area(self) -> Q_:
+    def tube_inner_flow_area(self) -> Q_:
         di = self.geometry.inner_diameter
         return pi * (di/2)**2
+
+    @property
+    def tube_inner_perimeter(self) -> Q_:
+        di = self.geometry.inner_diameter
+        return pi * di
     
+    @property
+    def tube_outer_perimeter(self) -> Q_:
+        do = self.outer_diameter
+        return pi * do
+
+    @property
+    def tube_inner_heat_transfer_area(self) -> Q_:
+        Pi = self.tube_inner_perimeter
+        L = self.geometry.inner_length
+        return Pi * L
+
     @property
     def outer_diameter(self) -> Q_:
         di = self.geometry.inner_diameter
@@ -23,8 +39,6 @@ class PassWithCalc(Pass):
     def cross_section_outer_area(self) -> Q_:
         do = self.outer_diameter
         return pi * (do/2)**2
-    
-
 
 @dataclass
 class DrumWithCalc(Drum):
@@ -44,11 +58,3 @@ class DrumWithCalc(Drum):
     def cross_section_outer_area(self) -> Q_:
         do = self.outer_diameter
         return pi * (do/2)**2
-    
-
-
-
-@dataclass
-class ReversalWithCalc(Reversal):
-
-    @property
