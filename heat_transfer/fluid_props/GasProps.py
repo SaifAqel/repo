@@ -20,3 +20,7 @@ class HotFlueGas:
     def enthalpy(self, T, P, X):
         self.gas.TPX = Q_(T).to("K").m, Q_(P).to("Pa").m, X
         return Q_(self.gas.enthalpy_mass, "J/kg")
+
+    def cp(self, T, P, X):
+        self.gas.TPX = Q_(T).to("K").m, Q_(P).to("Pa").m, X
+        return Q_(self.gas.cp_mass, "J/(kg*K)")

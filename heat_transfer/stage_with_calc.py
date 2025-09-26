@@ -1,7 +1,4 @@
-from heat_transfer.config.schemas import (
-    Config, Stages, Drum, Pass, Reversal,
-    GasSide, WaterSide, Environment
-)
+from heat_transfer.config.schemas import (Config, Stages, Drum, Pass, Reversal)
 from dataclasses import dataclass
 from common.units import ureg, Q_
 from math import pi
@@ -40,6 +37,16 @@ class PassWithCalc(Pass):
     def cross_section_outer_area(self) -> Q_:
         do = self.outer_diameter
         return pi * (do/2)**2
+    
+    @property
+    def segment_length(self) -> Q_:
+        L = self.geometry.inner_length
+        ns = self.geometry.number_of_segments
+        return L / ns
+
+    @property
+    def segment_heat_transfer_area(self) -> Q_:
+        return self.tube_inner_perimeter * self.segment_length * self.geometry.number_of_tubes
 
 @dataclass
 class DrumWithCalc(Drum):

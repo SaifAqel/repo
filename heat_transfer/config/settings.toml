@@ -56,6 +56,7 @@ fouling_conductivity = "0.20" # [W/(m·K)]
 inner_diameter = "0.019"      # tube ID [m]
 inner_length = "12.0"         # flow length [m]
 number_of_tubes = "1"       # [-]
+number_of_segments = "100"
 layout = "triangular"         # ['triangular'|'square']
 pitch = "0.029"               # center-to-center [m]
 [stages.pass1.geometry.wall.properties]

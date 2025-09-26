@@ -56,6 +56,7 @@ class PassGeometry:
     inner_diameter: Q_
     inner_length: Q_
     number_of_tubes: Q_
+    number_of_segments: Q_
     layout: str  # keep as string; not a quantity
     pitch: Q_
     wall: Wall
