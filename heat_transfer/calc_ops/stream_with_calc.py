@@ -5,7 +5,7 @@ import fnmatch
 import tomllib
 from common.units import ureg, Q_
 from heat_transfer.fluid_props.GasProps import HotFlueGas
-from heat_transfer.stage_with_calc import PassWithCalc
+from heat_transfer.calc_ops.stage_with_calc import PassWithCalc
 class Stream:
     def __init__(self, mass_flow_rate, HotFlueGas, PassWithCalc):
         self.m_dot = mass_flow_rate
