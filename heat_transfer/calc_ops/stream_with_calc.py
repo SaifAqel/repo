@@ -11,9 +11,6 @@ class Stream:
         self.m_dot = mass_flow_rate
         self.rho = HotFlueGas.density
         self.PassWithCalc = PassWithCalc
-        inlet_temperature
-        inlet_pressure
-        composition
 
     def velocity(self) -> Q_:
         return self.m_dot / (self.rho * self.PassWithCalc.tube_inner_flow_area)
