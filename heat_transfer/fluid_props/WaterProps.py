@@ -1,37 +1,45 @@
 from iapws import IAPWS97
+from common.units import ureg, Q_
 
-_MPA = 1e6
-_KJ = 1e3
 
 class WaterProps:
-    def Tsat(self, P: float) -> float:
-        return IAPWS97(P=P/_MPA, x=0).T
+    def Tsat(self, P: Q_) -> Q_:
+        w = IAPWS97(P=P.to("megapascal").magnitude, x=0)
+        return Q_(w.T, "kelvin")
 
-    def rho_l(self, T: float) -> float:
-        return IAPWS97(T=T, x=0).rho
+    def rho_l(self, T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=0)
+        return Q_(w.rho, "kg/m^3")
 
-    def rho_v(self, T: float) -> float:
-        return IAPWS97(T=T, x=1).rho
+    def rho_v(self, T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=1)
+        return Q_(w.rho, "kg/m^3")
 
-    def mu_l(self, T: float) -> float:
-        return IAPWS97(T=T, x=0).my
+    def mu_l(self, T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=0)
+        return Q_(w.my, "Pa*s")
 
-    def k_l(self, T: float) -> float:
-        return IAPWS97(T=T, x=0).k
+    def k_l(self, T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=0)
+        return Q_(w.k, "W/(m*K)")
 
-    def cp_l(self, T: float) -> float:
-        return IAPWS97(T=T, x=0).cp * _KJ
+    def cp_l(self, T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=0)
+        return Q_(w.cp, "kJ/(kg*K)")
 
-    def sigma(self, T: float) -> float:
-        return IAPWS97(T=T, x=0).sigma
+    def sigma(self, T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=0)
+        return Q_(w.sigma, "N/m")
 
-    def h_fg(self, P: float) -> float:
-        w_l = IAPWS97(P=P/_MPA, x=0)
-        w_v = IAPWS97(P=P/_MPA, x=1)
-        return (w_v.h - w_l.h) * _KJ
+    def h_fg(self, P: Q_) -> Q_:
+        w_l = IAPWS97(P=P.to("megapascal").magnitude, x=0)
+        w_v = IAPWS97(P=P.to("megapascal").magnitude, x=1)
+        return Q_(w_v.h - w_l.h, "kJ/kg")
 
-    def h_l(self, T: float) -> float:
-        return IAPWS97(T=T, x=0).h * _KJ
+    def h_l(self, T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=0)
+        return Q_(w.h, "kJ/kg")
 
-    def h_v(self, T: float) -> float:
-        return IAPWS97(T=T, x=1).h * _KJ
+    def h_v(self, T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=1)
+        return Q_(w.h, "kJ/kg")
