@@ -47,7 +47,7 @@ class TotalResistance:
     def resistance_per_area(self):
         return (self.r_water + self.r_wall + self.r_gas + self.r_foul_inner + self.r_foul_outer)
 
-class Flux:
+class Heat_Flux:
     def __init__(self, delta_T, r_total_per_area):
         self.delta_T = delta_T
         self.r_total_per_area = r_total_per_area
@@ -55,6 +55,6 @@ class Flux:
     def resistance_per_area(self):
         return self.delta_T / self.r_total_per_area
 
-class HeatTransfer:
+class Heat_Rate:
     def compute(self, flux, area):
         return flux * area

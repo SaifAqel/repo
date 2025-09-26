@@ -1,7 +1,7 @@
 import cantera as ct
 
 class HotFlueGas:
-    def __init__(self, gas: "ct.Solution"):
+    def __init__(self, gas: ct.Solution):
         self.gas = gas
 
     def thermal_conductivity(self, T, P, X):
@@ -16,4 +16,5 @@ class HotFlueGas:
         self.gas.TPX = T, P, X
         return self.gas.density
 
-
+    def enthalpy(self, T, P, X):
+        self.gas.TPX = T, P, X
