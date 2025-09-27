@@ -6,7 +6,7 @@ import tomllib
 from common.units import ureg, Q_
 from heat_transfer.fluid_props.GasProps import HotFlueGas
 from heat_transfer.calc_ops.stage_with_calc import PassWithCalc
-class Stream:
+class GasStreamWithCalc:
     def __init__(self, mass_flow_rate, HotFlueGas, PassWithCalc):
         self.m_dot = mass_flow_rate
         self.rho = HotFlueGas.density
