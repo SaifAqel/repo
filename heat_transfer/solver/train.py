@@ -1,18 +1,7 @@
 import numpy as np
 
 class MultiPassTrain:
-    """
-    Minimal orchestrator for sequential gas passes and nozzles.
-    You provide a list of segments in order. Each segment is either:
-      {"type": "pass",   "solver": FireTubeGasODE(...), "z_eval": np.ndarray}
-      {"type": "nozzle", "nozzle": NozzleObject(...)}   # will be called as nozzle.apply(T_in, p_in)
-
-    Behavior:
-      - For "pass": solves T(z), p(z) along that pass using the given solver and z_eval.
-      - For "nozzle": applies instantaneous transform to inlet state. No length is added.
-      - Results are concatenated into cumulative profiles z, T, p.
-    """
-
+    
     def __init__(self, segments):
         self.segments = segments
 

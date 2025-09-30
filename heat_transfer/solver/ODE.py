@@ -1,26 +1,6 @@
 from scipy.integrate import solve_ivp
 
 class FireTubeGasODE:
-    """
-    Minimal ODE for gas-side T(z), p(z) in a fire-tube pass.
-
-    Expects:
-      pass_geom: PassWithCalc instance exposing at least:
-          .D_i   (m)  inner diameter
-          .A     (m^2) flow area
-          .P     (m)  inner perimeter
-          .L     (m)  length
-          .rel_rough  (-) relative roughness (epsilon/D) or equivalent
-      props: object with
-          .rho(T, p) -> kg/m^3
-          .cp(T, p)  -> J/(kg·K)
-          .mu(T, p)  -> Pa·s
-      heat: object with
-          .q_prime(z, T, p) -> W/m   (local heat per unit length, already includes all resistances/radiation/boiling)
-      friction: object with
-          .f_D(Re, rel_rough) -> (-) Darcy friction factor
-      m_dot: float, kg/s (constant)
-    """
 
     def __init__(self, pass_geom, props, heat, friction, m_dot):
         self.g = pass_geom
