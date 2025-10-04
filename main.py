@@ -1,7 +1,14 @@
-segments = [
-    {"type": "pass", "solver": solver_pass1, "z_eval": np.linspace(0, pass1.L, 100)},
-    {"type": "nozzle", "nozzle": rev1},
-    {"type": "pass", "solver": solver_pass2, "z_eval": np.linspace(0, pass2.L, 100)},
-    {"type": "nozzle", "nozzle": rev2},
-    {"type": "pass", "solver": solver_pass3, "z_eval": np.linspace(0, pass3.L, 100)}
-]
+# run.py
+from heat_transfer.build_and_run import build_and_run
+
+if __name__ == "__main__":
+    config_path = "heat_transfer/config/settings.toml"
+    units_path = "heat_transfer/config/units.toml"
+    mech_yaml_path = "heat_transfer/fluid_props/flue_cantera.yaml"
+
+    z, T, p, Q_dot = build_and_run(config_path, units_path, mech_yaml_path)
+
+    print("z:", z)
+    print("T:", T)
+    print("p:", p)
+    print("Q_dot:", Q_dot)

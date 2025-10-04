@@ -37,20 +37,6 @@ class PassWithCalc(Pass):
     def cross_section_outer_area(self) -> Q_:
         do = self.outer_diameter
         return pi * (do/2)**2
-    
-    @property
-    def segment_length(self) -> Q_:
-        L = self.geometry.inner_length
-        ns = self.geometry.number_of_segments
-        return L / ns
-
-    @property
-    def segment_inner_surface_area(self) -> Q_:
-        return self.tube_inner_perimeter * self.segment_length * self.geometry.number_of_tubes
-    
-    @property 
-    def segment_inner_volume(self) -> Q_:
-        return self.tube_inner_flow_area * self.segment_length
 
     @property
     def tube_mean_beam_length(self) -> Q_:

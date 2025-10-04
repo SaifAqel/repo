@@ -2,17 +2,17 @@ from math import log, pi
 from common.units import ureg, Q_
 
 class ThermalResistance:
-    def __init__(self, h_boil, h_rad, h_conv, r_i, r_o, k, thickness_inner, k_foul_inner, thickness_outer, k_foul_outer):
-        self.h_boil = h_boil
+    def __init__(self, PassWithCalc, GasStream, PoolBoilingHTC, h_rad):
+        self.h_boil = PoolBoilingHTC.rohsenow_h
+        self.h_conv = GasStream.Convective_coefficient
         self.h_rad = h_rad
-        self.h_conv = h_conv
-        self.r_i = r_i
-        self.r_o = r_o
-        self.k = k
-        self.thickness_inner = thickness_inner
-        self.k_foul_inner = k_foul_inner
-        self.thickness_outer = thickness_outer
-        self.k_foul_outer = k_foul_outer
+        self.r_i = PassWithCalc.r_i
+        self.r_o = PassWithCalc.r_o
+        self.k = PassWithCalc.wall.k_wall
+        self.thickness_inner = PassWithCalc.thickness_inner
+        self.k_foul_inner = PassWithCalc.k_foul_inner
+        self.thickness_outer = PassWithCalc.thickness_outer
+        self.k_foul_outer = PassWithCalc.k_foul_outer
 
     def water_resistance(self):
         return (1 / self.h_boil).to("kelvin*meter**2/watt")
