@@ -152,13 +152,13 @@ class WaterWithCalc:
     
     def rohsenow_h(self, T_wall: Q_) -> Q_:
         g = 9.81 * ureg.m / (ureg.s**2)
-        delta_T = T_wall - self.saturation_temperature
-        h = (
-            (self.dynamic_viscosity_liquid**self.Water.mu_exp)
-            * self.thermal_conductivity
-            * ((g * (self.density_liquid - self.density_vapor) * self.surface_tension / self.density_vapor**2)**0.5)
-            * self.Water.C_sf 
-            * self.prandt_number **(-self.Water.n )
-            * (self.specific_capacity_liquid * delta_T / self.latent_heat_of_vaporization)**3
+        delta_T = T_wall - self.saturation_temperature # No boiling if ΔT <= 0; handle as single-phase if needed
+
+        q_dot = (
+            self.dynamic_viscosity_liquid
+            * self.latent_heat_of_vaporization
+            * ((g * (self.density_liquid - self.density_vapor) / self.surface_tension)**0.5)
+            * ((self.specific_capacity_liquid * delta_T) / (self.Water.C_sf * self.latent_heat_of_vaporization * self.prandt_number**self.Water.n))**3
         )
+        h = q_dot / delta_T
         return h.to("W / (m^2 * K)")

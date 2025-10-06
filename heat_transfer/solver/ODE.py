@@ -13,7 +13,8 @@ class FireTubeGasODE:
 
     def rhs(self, z, y):
         T_bulk, P = y
-        self.gas.gas_stream.temperature = T_bulk  # update bulk temp in stream
+        self.gas.gas_stream.temperature = Q_(T_bulk, 'kelvin')
+        self.gas.gas_stream.pressure = Q_(P, 'pascal')        
         q_dot = self.heat_system.q_
         dTdz = - q_dot / (self.gas.gas_stream.mass_flow_rate * self.gas.specific_heat)
         # dpdz can be added if needed
