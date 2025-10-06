@@ -54,7 +54,9 @@ def run(config_path: str, units_path: str, mech_yaml_path: str):
     pprint({"example_gas_stream": gas_stream_with_calc})
     pprint({"example_water_stream": water_stream})
 
-    ode = FireTubeGasODE(cfg_with_calc.stages.pass1, gas_stream_with_calc, water_with_calc)
+    ode = FireTubeGasODE(pass_with_calc = cfg_with_calc.stages.pass1,
+                        gas_stream_with_calc = gas_stream_with_calc,
+                        water_with_calc = water_with_calc)
     y0 = [gas_stream_with_calc.gas_stream.temperature.magnitude, gas_stream_with_calc.gas_stream.pressure.magnitude]
     z_span = (0, cfg_with_calc.stages.pass1.geometry.inner_length.magnitude)
 

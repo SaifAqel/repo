@@ -10,9 +10,11 @@ class HeatSystem:
     water: object
 
     def water_resistance(self, T_wall: Q_) -> Q_:
-        """Convective resistance from wall to water (boiling/condensing)"""
         h_w = self.water.rohsenow_h(T_wall)
-        return (1 / h_w).to("K*m**2/W")
+        di = self.geom.geometry.inner_diameter
+        r_i = di / 2
+        r_o = self.geom.outer_diameter / 2
+        return (r_i / r_o) * (1 / h_w).to("m**2 * K / W")
 
     def gas_resistance(self, T_wall: Q_) -> Q_:
         """Convective + radiative resistance from gas to wall"""
@@ -21,17 +23,25 @@ class HeatSystem:
 
     @property
     def wall_resistance(self) -> Q_:
-        """Conduction through tube wall"""
-        R = log((self.geom.r_o / self.geom.r_i).to_base_units().magnitude)
-        return Q_(R, "") / (2 * pi * self.geom.k * self.geom.r_i).to("W/K")
+        di = self.geom.geometry.inner_diameter
+        thickness = self.geom.geometry.wall.thickness
+        r_i = di / 2
+        r_o = r_i + thickness
+        ln_term = log(r_o / r_i)
+        return (r_i * ln_term / self.geom.geometry.wall.conductivity)
 
     @property
     def fouling_resistance_inner(self) -> Q_:
-        return (self.geom.thickness_inner / self.geom.k_foul_inner).to("K*m**2/W")
+        return (self.geom.surfaces.inner.fouling_thickness / self.geom.surfaces.inner.fouling_conductivity).to("K*m**2/W")
 
     @property
     def fouling_resistance_outer(self) -> Q_:
-        return (self.geom.thickness_outer / self.geom.k_foul_outer).to("K*m**2/W")
+        thickness = self.geom.surfaces.outer.fouling_thickness
+        k_foul = self.geom.surfaces.outer.fouling_conductivity
+        di = self.geom.geometry.inner_diameter
+        r_i = di / 2
+        r_o = self.geom.outer_diameter / 2
+        return (r_i / r_o) * (thickness / k_foul).to("m**2 * K / W")
 
     def total_resistance(self, T_wall: Q_) -> Q_:
         return (

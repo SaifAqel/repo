@@ -9,12 +9,12 @@ class PassWithCalc(Pass):
     @property
     def tube_inner_flow_area(self) -> Q_:
         di = self.geometry.inner_diameter
-        return pi * (di/2)**2
+        return self.geometry.number_of_tubes * pi * (di/2)**2
 
     @property
     def tube_inner_perimeter(self) -> Q_:
         di = self.geometry.inner_diameter
-        return pi * di
+        return self.geometry.number_of_tubes * pi * di
     
     @property
     def tube_outer_perimeter(self) -> Q_:

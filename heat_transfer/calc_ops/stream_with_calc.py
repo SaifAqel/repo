@@ -57,7 +57,7 @@ class GasStreamWithCalc:
 
     @property
     def velocity(self) -> Q_:
-        return self.gas_stream.mass_flow_rate / (self.density * self.geometry.tube_inner_flow_area * self.geometry.geometry.number_of_tubes)
+        return self.gas_stream.mass_flow_rate / (self.density * self.geometry.tube_inner_flow_area)
 
     @property
     def reynolds_number(self) -> Q_:
@@ -70,7 +70,10 @@ class GasStreamWithCalc:
     @property
     def nusselt_number(self) -> Q_:
         n = 0.3
-        return 0.023 * (self.reynolds_number ** 0.8) * (self.prandt_number ** n)
+        Re_mag = self.reynolds_number.magnitude
+        Pr_mag = self.prandt_number.magnitude
+        nu_mag = 0.023 * (Re_mag ** 0.8) * (Pr_mag ** n)
+        return Q_(nu_mag, ureg.dimensionless)
     
     @property
     def convective_coefficient(self) -> Q_:
