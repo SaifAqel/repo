@@ -37,10 +37,10 @@ class PassWithCalc(Pass):
     def cross_section_outer_area(self) -> Q_:
         do = self.outer_diameter
         return pi * (do/2)**2
-
+    
     @property
-    def tube_mean_beam_length(self) -> Q_:
-        return 1.8 * self.segment_inner_volume / self.segment_inner_surface_area
+    def rel_roughness(self) -> Q_:
+        return self.surfaces.inner.roughness / self.geometry.inner_diameter
 
 @dataclass
 class DrumWithCalc(Drum):

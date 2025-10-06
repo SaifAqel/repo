@@ -18,6 +18,10 @@ mass_flow_rate = "kg/s"
 inlet_temperature = "K"
 outlet_temperature = "K"
 pressure = "Pa"
+superheat = "1"
+mu_exp = "1"
+C_sf = "1"
+n = "1"
 
 [water_side.composition]
 NaCl = "1"
