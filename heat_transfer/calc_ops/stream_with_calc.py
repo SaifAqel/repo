@@ -12,6 +12,7 @@ class GasStream:
     temperature: Q_
     pressure: Q_
     composition: Dict[str, Q_]
+    spectroscopic_data: Dict[str, Q_]
 
 @dataclass
 class Water:
@@ -68,15 +69,16 @@ class GasStreamWithCalc:
     
     @property
     def nusselt_number(self) -> Q_:
-        return 0.023 * (self.reynolds_number ** 0.8) * (self.prandt_number ** self.gas_stream.n)
+        n = 0.3
+        return 0.023 * (self.reynolds_number ** 0.8) * (self.prandt_number ** n)
     
     @property
     def convective_coefficient(self) -> Q_:
-        return self.nusselt_number * self.thermal_conductivity / self.geometry.di
+        return self.nusselt_number * self.thermal_conductivity / self.geometry.geometry.inner_diameter
     
     @property
     def absorption_coefficient (self) -> Q_:
-        return sum(self.gas_stream.composition[s] * self.spectroscopic_data[s] for s in self.gas_stream.composition)
+        return sum(self.gas_stream.composition[s] * self.gas_stream.spectroscopic_data[s] for s in self.gas_stream.composition)
 
     @property
     def emmissivity(self) -> Q_:

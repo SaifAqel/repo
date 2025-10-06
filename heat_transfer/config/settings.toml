@@ -10,6 +10,13 @@ N2 = "0.74"
 O2 = "0.04"
 Ar = "0.01"
 
+[gas_side.spectroscopic_data]
+CO2 = 0.2
+H2O = 0.15
+N2 = 0.0
+O2 = 0.01
+Ar = 0.0
+
 [water_side]
 mass_flow_rate = "2.5"         # [kg/s]
 inlet_temperature = "330"       # [K]

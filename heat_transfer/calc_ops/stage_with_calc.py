@@ -41,6 +41,11 @@ class PassWithCalc(Pass):
     @property
     def rel_roughness(self) -> Q_:
         return self.surfaces.inner.roughness / self.geometry.inner_diameter
+    
+    @property
+    def path_length(self) -> Q_:
+        """Characteristic path length for radiation calculations."""
+        return self.geometry.inner_length
 
 @dataclass
 class DrumWithCalc(Drum):

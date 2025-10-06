@@ -13,6 +13,13 @@ H2  = "1"
 CH4 = "1"
 Ar  = "1"
 
+[gas_side.spectroscopic_data]
+CO2 = "1/m"
+H2O = "1/m"
+N2 = "1/m"
+O2 = "1/m"
+Ar = "1/m"
+
 [water_side]
 mass_flow_rate = "kg/s"
 inlet_temperature = "K"

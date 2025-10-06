@@ -20,6 +20,7 @@ def run(config_path: str, units_path: str, mech_yaml_path: str):
         temperature=gas.inlet_temperature,
         pressure=gas.inlet_pressure,
         composition=gas.composition,
+        spectroscopic_data=gas.spectroscopic_data
     )
 
     gas_cantera = ct.Solution('gri30.yaml')
@@ -54,7 +55,9 @@ def run(config_path: str, units_path: str, mech_yaml_path: str):
     pprint({"example_water_stream": water_stream})
 
     ode = FireTubeGasODE(cfg_with_calc.stages.pass1, gas_stream_with_calc, water_with_calc)
-    res = ode.rhs()
+    y0 = [gas_stream_with_calc.gas_stream.temperature.magnitude, gas_stream_with_calc.gas_stream.pressure.magnitude]
+    z_span = (0, cfg_with_calc.stages.pass1.geometry.inner_length.magnitude)
 
+    res = ode.solve(z_span, y0)
     # must return z, T, p, Q_dot for caller
     return res.get("z"), res.get("T"), res.get("p"), res.get("Q_dot")

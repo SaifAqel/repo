@@ -115,6 +115,7 @@ class GasSide:
     inlet_temperature: Q_
     inlet_pressure: Q_
     composition: Dict[str, Q_]
+    spectroscopic_data: Dict[str,Q_]
 
 
 @dataclass
@@ -268,6 +269,13 @@ def _load_composition(d: Mapping[str, Any], base: str, um: Mapping[str, str]) ->
         out[k] = _map_leaf_as_quantity(path, v, um)
     return out
 
+def _load_spectroscopic(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Dict[str, Q_]:
+    out: Dict[str, Q_] = {}
+    for k, v in d.items():
+        path = f"{base}.{k}"
+        out[k] = _map_leaf_as_quantity(path, v, um)
+    return out
+
 
 def _load_gas_side(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> GasSide:
     return GasSide(
@@ -275,6 +283,7 @@ def _load_gas_side(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> Ga
         inlet_temperature=_map_leaf_as_quantity(f"{base}.inlet_temperature", d["inlet_temperature"], um),
         inlet_pressure=_map_leaf_as_quantity(f"{base}.inlet_pressure", d["inlet_pressure"], um),
         composition=_load_composition(d.get("composition", {}), f"{base}.composition", um),
+        spectroscopic_data=_load_spectroscopic(d.get("spectroscopic_data", {}), f"{base}.spectroscopic_data", um),
     )
 
 
