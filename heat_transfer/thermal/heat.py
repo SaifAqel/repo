@@ -1,6 +1,7 @@
 from math import log, pi
 from dataclasses import dataclass
 from common.units import ureg, Q_
+from scipy.optimize import fsolve
 
 @dataclass
 class HeatSystem:
@@ -40,28 +41,31 @@ class HeatSystem:
             + self.fouling_resistance_inner
             + self.fouling_resistance_outer
         ).to("K*m**2/W")
-
+    
+    @property
+    def fixed_resistance(self) -> Q_:
+        return self.fouling_resistance_inner + self.wall_resistance + self.fouling_resistance_outer
     def wall_temperature(self) -> Q_:
-        """
-        Solve for T_wall implicitly from energy balance:
-        (T_bulk - T_wall)/R_gas = (T_wall - T_water)/R_water
-        """
-        R_g = self.gas_resistance  # function
-        R_w = self.water_resistance  # function
         T_bulk = self.gas.gas_stream.temperature
-        T_water = self.water.saturation_temperature
+        T_sat = self.water.saturation_temperature
+        R_fixed = self.fixed_resistance
 
-        # Solve explicitly:
-        Rg = R_g(T_bulk)  # approximate at current step
-        Rw = R_w(T_water)  # approximate at current step
-        T_wall = (T_bulk * Rw + T_water * Rg) / (Rg + Rw)
-        return T_wall
+        def residual(T_w_mag: float) -> float:
+            T_w = Q_(T_w_mag, 'kelvin')  # Gas-side wall temperature
+            h_g = self.gas.convective_coefficient + self.gas.radiation_coefficient(T_w)
+            q = h_g * (T_bulk - T_w)  # Heat flux from gas
+            T_w_water = T_w - q * R_fixed  # Water-side wall temperature, accounting for fixed resistances
+            h_w = self.water.rohsenow_h(T_w_water)
+            q_water = h_w * (T_w_water - T_sat)  # Heat flux to water
+            return (q - q_water).magnitude  # Residual in W/m²
 
+        T_guess = ((T_bulk + T_sat) / 2).magnitude
+        T_w_mag = fsolve(residual, T_guess)[0]
+        return Q_(T_w_mag, 'kelvin')
     def heat_flux(self) -> Q_:
-        """Compute heat flux per unit area"""
         T_w = self.wall_temperature()
-        return (self.gas.gas_stream.temperature - self.wall_temperature()) / self.gas_resistance(T_w)
-
+        h_g = self.gas.convective_coefficient + self.gas.radiation_coefficient(T_w)
+        return h_g * (self.gas.gas_stream.temperature - T_w)
     @property
     def q_(self) -> Q_:
         """Total heat rate (W)"""
