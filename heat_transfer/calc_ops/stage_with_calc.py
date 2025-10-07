@@ -45,7 +45,7 @@ class PassWithCalc(Pass):
     @property
     def path_length(self) -> Q_:
         """Characteristic path length for radiation calculations."""
-        return self.geometry.inner_length
+        return self.geometry.inner_diameter * 0.9
 
 @dataclass
 class DrumWithCalc(Drum):

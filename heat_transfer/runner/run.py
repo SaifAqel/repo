@@ -5,11 +5,19 @@ from common.units import ureg, Q_
 from heat_transfer.config.schemas import load_config
 from heat_transfer.calc_ops.stage_with_calc import with_calc as stages_with_calc
 from heat_transfer.calc_ops.stream_with_calc import GasStream, Water, GasStreamWithCalc, WaterWithCalc
+from heat_transfer.calc_ops.stage_with_calc import ReversalWithCalc
+from heat_transfer.solver.nozzle import Nozzle
 from heat_transfer.fluid_props.GasProps import GasProps
 from heat_transfer.fluid_props.WaterProps import WaterProps
 from heat_transfer.solver.ODE import FireTubeGasODE
 import cantera as ct
+from heat_transfer.runner.ChainStages import ChainStages
 
+
+# Changes to heat_transfer/runner/run.py
+# Replace the existing run function with this version.
+# Add import for the new class at the top:
+# from heat_transfer.runner.chain_stages import ChainStages
 
 def run(config_path: str, units_path: str, mech_yaml_path: str):
     cfg = load_config(config_path, units_path)
@@ -25,56 +33,35 @@ def run(config_path: str, units_path: str, mech_yaml_path: str):
     )
 
     gas_cantera = ct.Solution(mech_yaml_path)
-
-    gas_stream_with_calc = GasStreamWithCalc(
-        gas_props=GasProps(gas_cantera),      # your GasProps instance
-        gas_stream=gas_stream,
-        geometry=cfg_with_calc.stages.pass1  # or the appropriate geometry object
-    )
+    gas_props = GasProps(gas_cantera)
 
     water = cfg.water_side
     water_stream = Water(
-        mass_flow_rate = getattr(water, "mass_flow_rate", None),
-        inlet_temperature = getattr(water, "inlet_temperature", None),
-        outlet_temperature = getattr(water, "outlet_temperature", None),
-        pressure = getattr(water, "pressure", getattr(water, "outlet_pressure", None)),
-        superheat = getattr(water, "superheat", None),
-        mu_exp = getattr(water, "mu_exp", None),
-        C_sf = getattr(water, "C_sf", None),
-        n = getattr(water, "n", None),
-        composition = getattr(water, "composition", {}),
+        mass_flow_rate=water.mass_flow_rate,
+        inlet_temperature=water.inlet_temperature,
+        outlet_temperature=water.outlet_temperature,
+        pressure=water.pressure,
+        superheat=getattr(water, "superheat", None),  # Assuming optional
+        mu_exp=water.mu_exp,
+        C_sf=water.C_sf,
+        n=water.n,
+        composition=water.composition
     )
 
     water_with_calc = WaterWithCalc(
-        Water = water_stream,
-        WaterProps = WaterProps
+        Water=water_stream,
+        WaterProps=WaterProps
     )
 
-    pprint({"loaded_config": cfg})
-    pprint({"stages_with_calc_pass1": cfg_with_calc.stages.pass1})
-    pprint({"example_gas_stream": gas_stream_with_calc})
-    pprint({"example_water_stream": water_stream})
+    # pprint(...)  # Optional: keep or remove
 
-    ode = FireTubeGasODE(pass_with_calc = cfg_with_calc.stages.pass1,
-                        gas_stream_with_calc = gas_stream_with_calc,
-                        water_with_calc = water_with_calc)
-    y0 = [gas_stream_with_calc.gas_stream.temperature.magnitude, gas_stream_with_calc.gas_stream.pressure.magnitude]
-    z_span = (0, cfg_with_calc.stages.pass1.geometry.inner_length.magnitude)
-
-    res = ode.solve(z_span, y0)
-    if not res.success:
-        print("ODE failed:", res.message)
-        return None, None, None, None
-
-    z = res.t  # array of positions (m)
-    T = res.y[0]  # array of temperatures (K)
-    p = res.y[1]  # array of pressures (Pa)
-
-    # Post-compute Q_dot profile (W/m, heat rate per unit length)
-    Q_dot = []
-    for ti in T:
-        ode.gas.gas_stream.temperature = Q_(ti, 'kelvin')  # Update T_bulk
-        Q_dot.append(ode.heat_system.q_.magnitude)  # W/m
-    Q_dot = np.array(Q_dot)
+    # Now use the new ChainStages class
+    chain = ChainStages(
+        cfg_with_calc=cfg_with_calc,
+        gas_props=gas_props,
+        water_with_calc=water_with_calc,
+        gas_stream=gas_stream  # Passed and updated in-place
+    )
+    z, T, p, Q_dot = chain.run_chain()
 
     return z, T, p, Q_dot
