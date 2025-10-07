@@ -5,34 +5,13 @@ from common.units import ureg, Q_
 from math import exp, log, sqrt, log10
 from heat_transfer.fluid_props.WaterProps import WaterProps
 from heat_transfer.fluid_props.GasProps import GasProps
-
-@dataclass
-class GasStream:
-    mass_flow_rate: Q_
-    temperature: Q_
-    pressure: Q_
-    composition: Dict[str, Q_]
-    spectroscopic_data: Dict[str, Q_]
-
-@dataclass
-class Water:
-    mass_flow_rate: Q_
-    inlet_temperature: Q_
-    outlet_temperature: Q_
-    pressure: Q_
-    superheat: Q_
-    mu_exp: Q_
-    C_sf: Q_
-    n: Q_
-    composition: Dict[str, Q_]
-
-
+from heat_transfer.config.models import GasStream, Water
 
 @dataclass
 class GasStreamWithCalc:
 
-    gas_props: object
-    gas_stream: object
+    gas_props: GasProps
+    gas_stream: GasStream
     geometry: object
 
     @property
@@ -114,54 +93,128 @@ class GasStreamWithCalc:
 
 @dataclass
 class WaterWithCalc:
-    Water: object
-    WaterProps: object
+    water_stream: Water
+    water_props: WaterProps
 
     @property
     def saturation_temperature(self) -> Q_:
-        return self.WaterProps.Tsat(self.Water.pressure)
-    
-    @property
-    def density_liquid(self) -> Q_:
-        return self.WaterProps.rho_l(self.saturation_temperature)
-    
-    @property
-    def density_vapor(self) -> Q_:
-        return self.WaterProps.rho_v(self.saturation_temperature)
-    
-    @property
-    def dynamic_viscosity_liquid(self) -> Q_:
-        return self.WaterProps.mu_l(self.saturation_temperature)
-    
-    @property
-    def latent_heat_of_vaporization(self) -> Q_:
-        return self.WaterProps.h_fg(self.Water.pressure)
-    
-    @property
-    def surface_tension(self) -> Q_:
-        return self.WaterProps.sigma(self.saturation_temperature)
-    
-    @property
-    def specific_capacity_liquid(self) -> Q_:
-        return self.WaterProps.cp_l(self.saturation_temperature)
-    
-    @property
-    def thermal_conductivity(self) -> Q_:
-        return self.WaterProps.k_l(self.saturation_temperature)
+        return self.water_props.Tsat(self.water_stream.pressure)
 
     @property
+    def phase(self) -> str:
+        if self.water_stream.temperature < self.saturation_temperature:
+            return "liquid"
+        elif self.water_stream.temperature > self.saturation_temperature:
+            return "vapor"
+        else:
+            return "saturated"
+        
+    @property
+    def quality(self) -> Q_:
+        if self.phase != "saturated":
+            return Q_(0.0 if self.phase == "liquid" else 1.0, "dimensionless")
+        
+        h = self.water_props.h_l(self.water_stream.temperature)
+        h_l = self.water_props.h_l(self.water_stream.temperature)
+        h_v = self.water_props.h_v(self.water_stream.temperature)
+        x = (h - h_l) / (h_v - h_l)
+        return Q_(x, "dimensionless")
+
+    @property
+    def enthalpy(self) -> Q_:
+        if self.phase == "liquid":
+            return self.water_props.h_l(self.water_stream.temperature)
+        elif self.phase == "vapor":
+            return self.water_props.h_v(self.water_stream.temperature)
+        else:  # saturated/mixed
+            x = self.quality.magnitude
+            h_l = self.water_props.h_l(self.saturation_temperature)
+            h_v = self.water_props.h_v(self.saturation_temperature)
+            return Q_(h_l.magnitude * (1-x) + h_v.magnitude * x, "J/kg")
+
+    @property
+    def density(self) -> Q_:
+        if self.phase == "liquid":
+            return self.water_props.rho_l(self.water_stream.temperature)
+        elif self.phase == "vapor":
+            return self.water_props.rho_v(self.water_stream.temperature)
+        else:
+            x = self.quality.magnitude
+            rho_l = self.water_props.rho_l(self.saturation_temperature)
+            rho_v = self.water_props.rho_v(self.saturation_temperature)
+            return Q_(rho_l.magnitude * (1-x) + rho_v.magnitude * x, "kg/m^3")
+        
+    @property
+    def specific_heat(self) -> Q_:
+        """Specific heat capacity of the water at current temperature and phase."""
+        if self.phase == "liquid":
+            return self.water_props.cp_l(self.water_stream.temperature)
+        elif self.phase == "vapor":
+            return self.water_props.cp_v(self.water_stream.temperature)
+        else:  # saturated/mixed
+            cp_l = self.water_props.cp_l(self.saturation_temperature)
+            cp_v = self.water_props.cp_v(self.saturation_temperature)
+            x = self.quality.magnitude
+            return Q_(cp_l.magnitude * (1 - x) + cp_v.magnitude * x, "J/(kg*K)")
+
+    @property
+    def thermal_conductivity(self) -> Q_:
+        """Thermal conductivity of the water at current temperature and phase."""
+        if self.phase == "liquid":
+            return self.water_props.k_l(self.water_stream.temperature)
+        elif self.phase == "vapor":
+            return self.water_props.k_v(self.water_stream.temperature)
+        else:  # saturated/mixed
+            k_l = self.water_props.k_l(self.saturation_temperature)
+            k_v = self.water_props.k_v(self.saturation_temperature)
+            x = self.quality.magnitude
+            return Q_(k_l.magnitude * (1 - x) + k_v.magnitude * x, "W/(m*K)")
+
+    @property
+    def dynamic_viscosity(self) -> Q_:
+        """Dynamic viscosity of the water at current temperature and phase."""
+        if self.phase == "liquid":
+            return self.water_props.mu_l(self.water_stream.temperature)
+        elif self.phase == "vapor":
+            return self.water_props.mu_v(self.water_stream.temperature)
+        else:  # saturated/mixed
+            mu_l = self.water_props.mu_l(self.saturation_temperature)
+            mu_v = self.water_props.mu_v(self.saturation_temperature)
+            x = self.quality.magnitude
+            return Q_(mu_l.magnitude * (1 - x) + mu_v.magnitude * x, "Pa*s")
+
+
+    @property
+    def surface_tension(self) -> Q_:
+        """Surface tension of water at current temperature."""
+        # Usually surface tension is for liquid; for saturated mixtures, use saturation temperature
+        T = self.water_stream.temperature if self.phase == "liquid" else self.saturation_temperature
+        return self.water_props.sigma(T)  # Units: N/m or kg/s^2
+
+    @property
+    def latent_heat_of_vaporization(self) -> Q_:
+        """Latent heat of vaporization at current temperature."""
+        # For liquid or vapor or saturated, use saturation temperature
+        return self.water_props.h_v(self.saturation_temperature) - self.water_props.h_l(self.saturation_temperature)  # Units: J/kg
+    
+
+    
+    
+    @property
     def prandt_number(self) -> Q_:
-        return self.dynamic_viscosity_liquid * self.specific_capacity_liquid / self.thermal_conductivity
+        return self.dynamic_viscosity * self.specific_heat / self.thermal_conductivity
     
     def rohsenow_h(self, T_wall: Q_) -> Q_:
         g = 9.81 * ureg.m / (ureg.s**2)
-        delta_T = T_wall - self.saturation_temperature # No boiling if ΔT <= 0; handle as single-phase if needed
+        delta_T = T_wall - self.saturation_temperature
+        n = 1
+        Csf = 1
 
         q_dot = (
-            self.dynamic_viscosity_liquid
+            self.dynamic_viscosity
             * self.latent_heat_of_vaporization
-            * ((g * (self.density_liquid - self.density_vapor) / self.surface_tension)**0.5)
-            * ((self.specific_capacity_liquid * delta_T) / (self.Water.C_sf * self.latent_heat_of_vaporization * self.prandt_number**self.Water.n))**3
+            * ((g * (self.density - self.density) / self.surface_tension)**0.5)
+            * ((self.specific_heat * delta_T) / (Csf * self.latent_heat_of_vaporization * self.prandt_number**n))**3
         )
         h = q_dot / delta_T
         return h.to("W / (m^2 * K)")

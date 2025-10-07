@@ -1,4 +1,4 @@
-from heat_transfer.config.schemas import (Config, Stages, Drum, Pass, Reversal)
+from heat_transfer.config.models import (Config, Stages, Drum, Pass, Reversal)
 from dataclasses import dataclass
 from common.units import ureg, Q_
 from math import pi
@@ -134,8 +134,8 @@ def with_calc(cfg: Config) -> ConfigWithCalc:
         pass3=PassWithCalc(geometry=s.pass3.geometry, surfaces=s.pass3.surfaces),
     )
     return ConfigWithCalc(
-        gas_side=cfg.gas_side,
-        water_side=cfg.water_side,
+        gas_inlet=cfg.gas_inlet,
+        water_inlet=cfg.water_inlet,
         environment=cfg.environment,
         stages=stages_calc,
     )

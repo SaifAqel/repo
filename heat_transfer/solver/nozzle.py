@@ -5,7 +5,7 @@ from typing import Tuple
 from common.units import Q_
 from heat_transfer.calc_ops.stream_with_calc import GasStream
 from heat_transfer.fluid_props.GasProps import GasProps
-from heat_transfer.config.schemas import Nozzle
+from heat_transfer.config.models import Nozzle
 
 class Nozzle:
     def __init__(self, geom: Nozzle, gas_stream: GasStream, gas_props: GasProps, K: Q_):
