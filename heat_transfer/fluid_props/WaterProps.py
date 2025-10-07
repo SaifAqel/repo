@@ -25,13 +25,29 @@ class WaterProps:
         return Q_(w.mu, "Pa*s")
 
     @staticmethod
+    def mu_v(T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=1)
+        return Q_(w.mu, "Pa*s")
+
+
+    @staticmethod
     def k_l(T: Q_) -> Q_:
         w = IAPWS97(T=T.to("kelvin").magnitude, x=0)
+        return Q_(w.k, "W/(m*K)")
+    
+    @staticmethod
+    def k_v(T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=1)
         return Q_(w.k, "W/(m*K)")
 
     @staticmethod
     def cp_l(T: Q_) -> Q_:
         w = IAPWS97(T=T.to("kelvin").magnitude, x=0)
+        return Q_(w.cp * 1e3, "J/(kg*K)")
+    
+    @staticmethod
+    def cp_v(T: Q_) -> Q_:
+        w = IAPWS97(T=T.to("kelvin").magnitude, x=1)
         return Q_(w.cp * 1e3, "J/(kg*K)")
 
     @staticmethod

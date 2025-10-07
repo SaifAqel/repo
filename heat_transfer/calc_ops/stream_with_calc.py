@@ -208,12 +208,12 @@ class WaterWithCalc:
         g = 9.81 * ureg.m / (ureg.s**2)
         delta_T = T_wall - self.saturation_temperature
         n = 1
-        Csf = 1
+        Csf = 0.013
 
         q_dot = (
             self.dynamic_viscosity
             * self.latent_heat_of_vaporization
-            * ((g * (self.density - self.density) / self.surface_tension)**0.5)
+            * ((g * (self.water_props.rho_l(self.water_stream.temperature) - self.water_props.rho_v(self.water_stream.temperature)) / self.surface_tension)**0.5)
             * ((self.specific_heat * delta_T) / (Csf * self.latent_heat_of_vaporization * self.prandt_number**n))**3
         )
         h = q_dot / delta_T
