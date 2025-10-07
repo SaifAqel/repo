@@ -17,6 +17,7 @@ H2O = "1/m"
 N2 = "1/m"
 O2 = "1/m"
 Ar = "1/m"
+SO2 = "1/m"
 
 [water_side]
 mass_flow_rate = "kg/s"

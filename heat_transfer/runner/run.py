@@ -23,7 +23,7 @@ def run(config_path: str, units_path: str, mech_yaml_path: str):
         spectroscopic_data=gas.spectroscopic_data
     )
 
-    gas_cantera = ct.Solution('gri30.yaml')
+    gas_cantera = ct.Solution(mech_yaml_path)
 
     gas_stream_with_calc = GasStreamWithCalc(
         gas_props=GasProps(gas_cantera),      # your GasProps instance
