@@ -20,10 +20,10 @@ Ar = "0.0"
 SO2 = "0.3"
 
 [water_side]
-mass_flow_rate = "3.333"         # [kg/s]
-inlet_temperature = "378.15"       # [K]
-outlet_temperature = "443.15"      # [K]
-pressure = "1000000"             # [Pa]
+mass_flow_rate = "3.333"
+inlet_temperature = "378.15"
+outlet_temperature = "465.00"
+pressure = "1000000"
 mu_exp = "1"
 C_sf = "1"
 n = "1"

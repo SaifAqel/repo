@@ -1,6 +1,7 @@
 from pathlib import Path
 from pprint import pprint
-
+import numpy as np
+from common.units import ureg, Q_
 from heat_transfer.config.schemas import load_config
 from heat_transfer.calc_ops.stage_with_calc import with_calc as stages_with_calc
 from heat_transfer.calc_ops.stream_with_calc import GasStream, Water, GasStreamWithCalc, WaterWithCalc
@@ -61,5 +62,19 @@ def run(config_path: str, units_path: str, mech_yaml_path: str):
     z_span = (0, cfg_with_calc.stages.pass1.geometry.inner_length.magnitude)
 
     res = ode.solve(z_span, y0)
-    # must return z, T, p, Q_dot for caller
-    return res.get("z"), res.get("T"), res.get("p"), res.get("Q_dot")
+    if not res.success:
+        print("ODE failed:", res.message)
+        return None, None, None, None
+
+    z = res.t  # array of positions (m)
+    T = res.y[0]  # array of temperatures (K)
+    p = res.y[1]  # array of pressures (Pa)
+
+    # Post-compute Q_dot profile (W/m, heat rate per unit length)
+    Q_dot = []
+    for ti in T:
+        ode.gas.gas_stream.temperature = Q_(ti, 'kelvin')  # Update T_bulk
+        Q_dot.append(ode.heat_system.q_.magnitude)  # W/m
+    Q_dot = np.array(Q_dot)
+
+    return z, T, p, Q_dot
