@@ -18,7 +18,11 @@ class FireTubeGasODE:
         q_dot = self.heat_system.q_
         dTdz = - q_dot / (self.gas.gas_stream.mass_flow_rate * self.gas.specific_heat)
         # dpdz can be added if needed
-        dpdz = 0
+        f = self.gas.friction_factor
+        rho = self.gas.density.magnitude
+        v = self.gas.velocity.magnitude
+        di = self.geom.geometry.inner_diameter.magnitude
+        dpdz = - (f / di) * (0.5 * rho * v**2)  # Pa/m
         return [dTdz.magnitude, dpdz]
 
     def solve(self, z_span, y0, method="BDF", **kwargs):
