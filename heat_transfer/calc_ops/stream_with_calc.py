@@ -103,10 +103,11 @@ class WaterWithCalc:
     @property
     def phase(self) -> str:
         Tsat = self.saturation_temperature
-        if self.water_stream.temperature < Tsat:
-            return "liquid"
-        if self.water_stream.temperature > Tsat:
-            return "vapor"
+        h_l = self.water_props.h_l_sat(self.water_stream.pressure)
+        h_v = self.water_props.h_v_sat(self.water_stream.pressure)
+        h = self.enthalpy  # Or pass h if available
+        if self.water_stream.temperature < Tsat or h < h_l: return "liquid"
+        if self.water_stream.temperature > Tsat or h > h_v: return "vapor"
         return "saturated"
 
     @property

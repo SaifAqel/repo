@@ -136,6 +136,7 @@ class ConfigLoader:
             pressure=cls._qty(node["pressure"]),
             composition=composition,
             spectroscopic_data=spectro,
+            z=cls._qty(node["z"])
         )
 
     @classmethod
@@ -146,6 +147,8 @@ class ConfigLoader:
             temperature=cls._qty(node["temperature"]),
             pressure=cls._qty(node["pressure"]),
             composition=composition,
+            z=cls._qty(node["z"])
+
         )
 
     @classmethod

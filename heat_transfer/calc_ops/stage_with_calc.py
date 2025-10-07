@@ -1,4 +1,4 @@
-from heat_transfer.config.models import (Config, Stages, Drum, Pass, Reversal)
+from heat_transfer.config.models import Config, Stages, Drum, Pass, Reversal, Config
 from dataclasses import dataclass
 from common.units import ureg, Q_
 from math import pi
@@ -121,7 +121,6 @@ class StagesWithCalc(Stages):
 @dataclass
 class ConfigWithCalc(Config):
     stages: StagesWithCalc
-
 
 def with_calc(cfg: Config) -> ConfigWithCalc:
     s = cfg.stages

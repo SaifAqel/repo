@@ -89,6 +89,7 @@ class GasStream:
     pressure: Q_
     composition: Dict[str, Q_]
     spectroscopic_data: Dict[str, Q_]
+    z: Q_
 
 @dataclass
 class Water:
@@ -96,6 +97,7 @@ class Water:
     temperature: Q_
     pressure: Q_
     composition: Dict[str, Q_]
+    z: Q_
 
 
 @dataclass
@@ -105,7 +107,6 @@ class Environment:
     external_emissivity: Q_
     external_h: Q_
     radiation_view_factor_external: Q_
-
 
 @dataclass
 class Config:

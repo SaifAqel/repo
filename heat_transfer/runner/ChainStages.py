@@ -50,7 +50,7 @@ class ChainStages:
         gas_stream: GasStream,  # Initial gas stream; updated in-place
         water_props: WaterProps
     ):
-        self.cfg_with_calc = cfg_with_calc
+        self.cfg = cfg_with_calc
         self.gas_props = gas_props
         self.water_stream = water_stream
         self.gas_stream = gas_stream  # Mutable; updated across stages
@@ -176,9 +176,6 @@ class ChainStages:
             T_end = converter.T_from_h(h_end, water_calc.water_stream.pressure)
             water_calc.water_stream.temperature = T_end
 
-            # Update pressure if it changes during the stage (otherwise keep original)
-            p_end = Q_(h_stage[-1], 'Pa')  # <-- replace with actual water pressure if ODE tracks it
-            water_calc.water_stream.pressure = p_end
 
 
         final_h = water_calc.enthalpy
