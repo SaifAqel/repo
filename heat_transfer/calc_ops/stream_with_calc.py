@@ -103,11 +103,8 @@ class WaterWithCalc:
     @property
     def phase(self) -> str:
         Tsat = self.saturation_temperature
-        h_l = self.water_props.h_l_sat(self.water_stream.pressure)
-        h_v = self.water_props.h_v_sat(self.water_stream.pressure)
-        h = self.enthalpy  # Or pass h if available
-        if self.water_stream.temperature < Tsat or h < h_l: return "liquid"
-        if self.water_stream.temperature > Tsat or h > h_v: return "vapor"
+        if self.water_stream.temperature < Tsat: return "liquid"
+        if self.water_stream.temperature > Tsat: return "vapor"
         return "saturated"
 
     @property
@@ -116,13 +113,11 @@ class WaterWithCalc:
         if self.phase != "saturated":
             return Q_(0.0 if self.phase == "liquid" else 1.0, "dimensionless")
 
-        h = self.water_props.h_l_sat(P)  # not used but keep pattern
         h_l = self.water_props.h_l_sat(P)
         h_v = self.water_props.h_v_sat(P)
         # avoid division by zero
         x = 0.0
         if (h_v - h_l).magnitude != 0:
-            # here bulk enthalpy unknown; assume water_stream.temperature == Tsat so quality must be computed elsewhere
             x = 0.0
         return Q_(x, "dimensionless")
 
