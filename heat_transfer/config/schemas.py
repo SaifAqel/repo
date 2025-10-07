@@ -124,7 +124,6 @@ class WaterSide:
     inlet_temperature: Q_
     outlet_temperature: Q_
     pressure: Q_
-    superheat: Q_
     mu_exp: Q_
     C_sf: Q_
     n: Q_
@@ -293,7 +292,6 @@ def _load_water_side(d: Mapping[str, Any], base: str, um: Mapping[str, str]) -> 
         inlet_temperature=_map_leaf_as_quantity(f"{base}.inlet_temperature", d["inlet_temperature"], um),
         outlet_temperature=_map_leaf_as_quantity(f"{base}.outlet_temperature", d["outlet_temperature"], um),
         pressure=_map_leaf_as_quantity(f"{base}.pressure", d["pressure"], um),
-        superheat = _map_leaf_as_quantity(f"{base}.superheat", d["superheat"], um),
         mu_exp = _map_leaf_as_quantity(f"{base}.mu_exp", d["mu_exp"], um),
         C_sf = _map_leaf_as_quantity(f"{base}.C_sf", d["C_sf"], um),
         n = _map_leaf_as_quantity(f"{base}.n", d["n"], um),

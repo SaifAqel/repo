@@ -1,28 +1,29 @@
 [gas_side]
-mass_flow_rate = "3.0"        # [kg/s]
-inlet_temperature = "850"      # [K]
-inlet_pressure = "150000"      # [Pa]
+mass_flow_rate = "9.427"
+inlet_temperature = "2176.59"
+inlet_pressure = "115000"
 
-[gas_side.composition]     # species = mole_fraction [-], sum=1
-CO2 = "0.12"
-H2O = "0.09"
-N2 = "0.74"
-O2 = "0.04"
-Ar = "0.01"
+[gas_side.composition]
+CO2 = "0.089497"
+H2O = "0.170469"
+N2 = "0.713727"
+O2 = "0.017384"
+Ar = "0.008489"
+SO2 = "0.00435"
 
 [gas_side.spectroscopic_data]
-CO2 = 0.2
-H2O = 0.15
-N2 = 0.0
-O2 = 0.01
-Ar = 0.0
+CO2 = "0.05"
+H2O = "0.5"
+N2 = "0.000001"
+O2 = "0.001"
+Ar = "0.0"
+SO2 = "0.3"
 
 [water_side]
-mass_flow_rate = "2.5"         # [kg/s]
-inlet_temperature = "330"       # [K]
-outlet_temperature = "370"      # [K]
+mass_flow_rate = "3.333"         # [kg/s]
+inlet_temperature = "378.15"       # [K]
+outlet_temperature = "443.15"      # [K]
 pressure = "1000000"             # [Pa]
-superheat = "1"
 mu_exp = "1"
 C_sf = "1"
 n = "1"
@@ -33,8 +34,8 @@ n = "1"
 # SiO2 = ""
 
 [environment]
-ambient_temperature = "300"             # [K]
-radiative_temperature = "300"           # Trad,∞ [K]
+ambient_temperature = "298.15"             # [K]
+radiative_temperature = "298.15"           # Trad,∞ [K]
 external_emissivity = "0.85"            # [-]
 external_h = "8"                        # [W/(m^2·K)]
 radiation_view_factor_external = "1.0"  # [-]
@@ -42,11 +43,11 @@ radiation_view_factor_external = "1.0"  # [-]
 # ---------- STAGES ----------
 
 [stages.drum.geometry]
-inner_diameter = "1.2"        # [m]
-inner_length = "3.0"          # [m]
+inner_diameter = "3.150"
+inner_length = "5.620"
 [stages.drum.geometry.wall.properties]
-thickness = "0.02"            # [m]
-conductivity = "45"           # [W/(m·K)]
+thickness = "0.010"
+conductivity = "45"
 
 [stages.drum.surfaces.inner]
 roughness = "0.00002"         # [m]
@@ -61,15 +62,14 @@ fouling_thickness = "0.0001"  # [m]
 fouling_conductivity = "0.20" # [W/(m·K)]
 
 [stages.pass1.geometry]
-inner_diameter = "0.019"      # tube ID [m]
-inner_length = "12.0"         # flow length [m]
-number_of_tubes = "1"       # [-]
-number_of_segments = "100"
-layout = "triangular"         # ['triangular'|'square']
-pitch = "0.029"               # center-to-center [m]
+inner_diameter = "1.4"
+inner_length = "5.276"
+number_of_tubes = "1"
+layout = "triangular"
+pitch = "0.029"
 [stages.pass1.geometry.wall.properties]
-thickness = "0.002"           # tube wall [m]
-conductivity = "16"           # tube wall k [W/(m·K)]
+thickness = "0.0029"
+conductivity = "16"
 
 [stages.pass1.surfaces.inner]
 roughness = "0.000015"        # tube ID roughness [m]
@@ -111,14 +111,14 @@ fouling_thickness = "0.0001"  # [m]
 fouling_conductivity = "0.20" # [W/(m·K)]
 
 [stages.pass2.geometry]
-inner_diameter = "0.019"      # tube ID [m]
-inner_length = "12.0"         # flow length [m]
-number_of_tubes = "120"       # [-]
-layout = "triangular"         # ['triangular'|'square']
-pitch = "0.029"               # [m]
+inner_diameter = "0.076"
+inner_length = "4.975"
+number_of_tubes = "118"
+layout = "triangular"
+pitch = "0.029"
 [stages.pass2.geometry.wall.properties]
-thickness = "0.002"           # [m]
-conductivity = "16"           # [W/(m·K)]
+thickness = "0.0029"
+conductivity = "16"
 
 [stages.pass2.surfaces.inner]
 roughness = "0.000015"        # [m]
@@ -160,14 +160,14 @@ fouling_thickness = "0.0001"  # [m]
 fouling_conductivity = "0.20" # [W/(m·K)]
 
 [stages.pass3.geometry]
-inner_diameter = "0.019"      # tube ID [m]
-inner_length = "12.0"         # flow length [m]
-number_of_tubes = "120"       # [-]
-layout = "triangular"         # ['triangular'|'square']
-pitch = "0.029"               # [m]
+inner_diameter = "0.076"
+inner_length = "5.620"
+number_of_tubes = "100"
+layout = "triangular"
+pitch = "0.029"
 [stages.pass3.geometry.wall.properties]
-thickness = "0.002"           # [m]
-conductivity = "16"           # [W/(m·K)]
+thickness = "0.0029"
+conductivity = "16"
 
 [stages.pass3.surfaces.inner]
 roughness = "0.000015"        # [m]
