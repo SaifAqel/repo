@@ -4,6 +4,9 @@ from common.units import Q_, ureg
 from heat_transfer.calc_ops.stream_with_calc import WaterWithCalc
 from scipy.optimize import root_scalar
 
+from scipy.optimize import root_scalar
+
+
 @dataclass
 class WaterStateConverter:
     water_with_calc: WaterWithCalc
@@ -11,38 +14,36 @@ class WaterStateConverter:
     def h_from_T(self, T: Q_, P: Q_) -> Q_:
         Tsat = self.water_with_calc.water_props.Tsat(P)
         if T <= Tsat:
-            return self.water_with_calc.water_props.h_l(T)
-        return self.water_with_calc.water_props.h_v(T)
+            return self.water_with_calc.water_props.h_l_sat(P)
+        return self.water_with_calc.water_props.h_v_sat(P)
 
     def T_from_h(self, h: Q_, P: Q_) -> Q_:
         """
         Convert enthalpy h at pressure P to temperature T.
-        Handles:
-        - Subcooled liquid
-        - Saturated mixture
-        - Superheated vapor
+        Handles subcooled liquid, saturated mixture, and superheated vapor.
+        Uses IAPWS97(P, T) single-phase solve. Returns Tsat(P) if two-phase.
+        Upper bracket extended to 2273 K.
         """
-        # Saturation properties
         Tsat = self.water_with_calc.water_props.Tsat(P)
-        h_l_sat = self.water_with_calc.water_props.h_l(Tsat)
-        h_v_sat = self.water_with_calc.water_props.h_v(Tsat)
+        h_l_sat = self.water_with_calc.water_props.h_l_sat(P)
+        h_v_sat = self.water_with_calc.water_props.h_v_sat(P)
 
-        # Saturated mixture
+        # saturated mixture
         if h_l_sat <= h <= h_v_sat:
             return Tsat
 
-        margin = 5.0  # K, keep away from phase boundaries
+        margin = 5.0  # K
 
         # ---------------- Subcooled liquid ----------------
         if h < h_l_sat:
             def f(Tk):
-                return (self.water_with_calc.water_props.h_l(Q_(Tk, 'kelvin')).to('J/kg') - h.to('J/kg')).magnitude
+                target = self.water_with_calc.water_props.h_single(P, Q_(Tk, 'kelvin')).to('J/kg')
+                return (target.magnitude - h.to('J/kg').magnitude)
 
-            low = max(273.15 + 1e-2, Tsat.to('kelvin').magnitude - 500)
+            low = max(273.15 + 1e-2, (Tsat.to('kelvin').magnitude - 500))
             high = Tsat.to('kelvin').magnitude - margin
 
             f_low, f_high = f(low), f(high)
-            # If root bracket invalid, return nearest boundary
             if f_low * f_high > 0:
                 return Q_(low if abs(f_low) < abs(f_high) else high, 'kelvin')
 
@@ -52,10 +53,11 @@ class WaterStateConverter:
         # ---------------- Superheated vapor ----------------
         if h > h_v_sat:
             def f2(Tk):
-                return (self.water_with_calc.water_props.h_v(Q_(Tk, 'kelvin')).to('J/kg') - h.to('J/kg')).magnitude
+                target = self.water_with_calc.water_props.h_single(P, Q_(Tk, 'kelvin')).to('J/kg')
+                return (target.magnitude - h.to('J/kg').magnitude)
 
             low = Tsat.to('kelvin').magnitude + margin
-            high = min(1073.15 - margin, low + 500)
+            high = min(2273.0 - margin, low + 1500.0)
 
             f_low, f_high = f2(low), f2(high)
             if f_low * f_high > 0:
@@ -64,14 +66,12 @@ class WaterStateConverter:
             sol = root_scalar(f2, bracket=[low, high])
             return Q_(sol.root, 'kelvin')
 
+    def quality_from_h(self, h: Q_, P: Q_) -> Q_:
+        Tsat = self.water_with_calc.water_props.Tsat(P)
+        h_l = self.water_with_calc.water_props.h_l_sat(P)
+        h_fg = self.water_with_calc.water_props.h_fg(P)
+        return (h - h_l) / h_fg
 
-
-
-        def quality_from_h(self, h: Q_, P: Q_) -> Q_:
-            Tsat = self.water_with_calc.water_props.Tsat(P)
-            h_l = self.water_with_calc.water_props.h_l(Tsat)
-            h_fg = self.water_with_calc.water_props.h_fg(P)
-            return (h - h_l) / h_fg
 
 
 @dataclass
