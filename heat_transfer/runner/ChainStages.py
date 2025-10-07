@@ -92,11 +92,12 @@ class ChainStages:
                     geom=stage.nozzles.inlet,
                     gas_stream=self.gas_stream,
                     gas_props=self.gas_props,
-                    K = Q_(0.5, '')
+                    K=Q_(0.5, ureg.dimensionless)
                 )
                 T_new, p_new = nozzle_in.apply(
                     self.gas_stream.temperature,
                     self.gas_stream.pressure,
+
                 )
                 self.gas_stream.temperature = Q_(T_new)
                 self.gas_stream.pressure = Q_(p_new)
@@ -117,7 +118,7 @@ class ChainStages:
 
             # Initial conditions
             y0 = [self.gas_stream.temperature.magnitude, self.gas_stream.pressure.magnitude]
-            z_span = (0, stage.path_length.magnitude)  # Use path_length for consistency
+            z_span = (0, stage.geometry.inner_length.magnitude)  # Use path_length for consistency
 
             # Solve ODE
             res = ode.solve(z_span, y0)
@@ -151,14 +152,14 @@ class ChainStages:
             if isinstance(stage, ReversalWithCalc):
                 # Assume K=1.0 for expansion; refine later
                 nozzle_out = Nozzle(
-                    K=1.0,
-                    diameter=stage.nozzles.outlet.diameter.magnitude,
-                    m_dot=self.gas_stream.mass_flow_rate.magnitude,
-                    gas_props=self.gas_props
+                    geom=stage.nozzles.outlet,
+                    gas_stream=self.gas_stream,
+                    gas_props=self.gas_props,
+                    K = Q_(0.5, ureg.dimensionless)
                 )
                 T_new, p_new = nozzle_out.apply(
-                    self.gas_stream.temperature.magnitude,
-                    self.gas_stream.pressure.magnitude
+                    self.gas_stream.temperature,
+                    self.gas_stream.pressure
                 )
                 self.gas_stream.temperature = Q_(T_new, 'kelvin')
                 self.gas_stream.pressure = Q_(p_new, 'pascal')

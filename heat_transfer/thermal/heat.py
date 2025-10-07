@@ -89,4 +89,4 @@ class HeatSystem:
 
     @property
     def q_(self) -> Q_:
-        return self.heat_flux() * self.geom.tube_inner_perimeter * self.geom.geometry.number_of_tubes
+        return self.heat_flux() * self.geom.tube_inner_perimeter
