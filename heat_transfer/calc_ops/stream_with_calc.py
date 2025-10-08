@@ -6,7 +6,7 @@ from math import exp, log, sqrt, log10
 from heat_transfer.fluid_props.WaterProps import WaterProps
 from heat_transfer.fluid_props.GasProps import GasProps
 from heat_transfer.config.models import GasStream, Water
-
+from heat_transfer.fluid_props.htc_water import HTCFunctions
 @dataclass
 class GasStreamWithCalc:
 
@@ -204,32 +204,6 @@ class WaterWithCalc:
     def prandt_number(self) -> Q_:
         return self.dynamic_viscosity * self.specific_heat / self.thermal_conductivity
 
-    def rohsenow_h(self, T_wall: Q_) -> Q_:
-        """Use saturated liquid/vapor properties at the fixed pressure for Rohsenow correlation."""
-        P = self.water_stream.pressure
-        Tsat = self.water_props.Tsat(P)
-        delta_T = T_wall - Tsat
-        if delta_T.magnitude <= 0:
-            return Q_(0.0, "W/(m^2*K)")
-
-        g = 9.81 * ureg.m / (ureg.s**2)
-        n = 1
-        Csf = 0.013
-
-        # use saturated properties at P
-        mu_l = self.water_props.mu_l_sat(P)
-        h_fg = self.water_props.h_fg(P)
-        rho_l = self.water_props.rho_l_sat(P)
-        rho_v = self.water_props.rho_v_sat(P)
-        sigma = self.water_props.sigma_sat(P)
-        cp_l = self.water_props.cp_l_sat(P)
-        k_l = self.water_props.k_l_sat(P)
-
-        q_dot = (
-            mu_l
-            * h_fg
-            * ((g * (rho_l - rho_v) / sigma) ** 0.5)
-            * ((cp_l * delta_T) / (Csf * h_fg * (mu_l * cp_l / k_l) ** n)) ** 3
-        )
-        h = q_dot / delta_T
-        return h.to("W / (m^2 * K)")
+    @property
+    def htc(self) -> Q_:
+        return HTCFunctions.htc_shell(self)

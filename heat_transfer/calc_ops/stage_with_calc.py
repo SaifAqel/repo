@@ -4,7 +4,30 @@ from common.units import ureg, Q_
 from math import pi
 
 @dataclass
-class PassWithCalc(Pass):
+class DrumWithCalc:
+
+    geom: Drum
+
+    @property
+    def cross_section_inner_area(self) -> Q_:
+        di = self.geom.geometry.inner_diameter
+        return pi * (di/2)**2
+    
+    @property
+    def outer_diameter(self) -> Q_:
+        di = self.geom.geometry.inner_diameter
+        k = self.geom.geometry.wall.thickness
+        return di + (2 * k)
+
+    @property
+    def cross_section_outer_area(self) -> Q_:
+        do = self.outer_diameter
+        return pi * (do/2)**2
+
+@dataclass
+class PassWithCalc:
+    Pass: Pass
+    shell: DrumWithCalc
 
     @property
     def tube_inner_flow_area(self) -> Q_:
@@ -46,25 +69,6 @@ class PassWithCalc(Pass):
     def path_length(self) -> Q_:
         """Characteristic path length for radiation calculations."""
         return self.geometry.inner_diameter * 0.9
-
-@dataclass
-class DrumWithCalc(Drum):
-
-    @property
-    def cross_section_inner_area(self) -> Q_:
-        di = self.geometry.inner_diameter
-        return pi * (di/2)**2
-    
-    @property
-    def outer_diameter(self) -> Q_:
-        di = self.geometry.inner_diameter
-        k = self.geometry.wall.thickness
-        return di + (2 * k)
-
-    @property
-    def cross_section_outer_area(self) -> Q_:
-        do = self.outer_diameter
-        return pi * (do/2)**2
     
 @dataclass
 class ReversalWithCalc(Reversal):
