@@ -1,10 +1,10 @@
 from scipy.integrate import solve_ivp
-from heat_transfer.thermal.heat import HeatSystem
+from heat_transfer.solver.heat import HeatSystem
 from common.units import ureg, Q_
 # heat_transfer/solver/ODE.py  (replace FireTubeGasODE implementation)
 
 from scipy.integrate import solve_ivp
-from heat_transfer.thermal.heat import HeatSystem
+from heat_transfer.solver.heat import HeatSystem
 from common.units import ureg, Q_
 from heat_transfer.solver.water_balance import WaterStateConverter, WaterEnergyRHS
 

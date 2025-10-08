@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from common.units import ureg, Q_
-from typing import Dict
+from typing import Dict, Optional, List
 
 @dataclass
 class Wall:
@@ -90,6 +90,10 @@ class GasStream:
     composition: Dict[str, Q_]
     spectroscopic_data: Dict[str, Q_]
     z: Q_
+    heat_transfer_rate: Optional[Q_] = None
+    velocity: Optional[Q_] = None
+    reynolds_number: Optional[Q_] = None
+    density: Optional[Q_] = None
 
 @dataclass
 class Water:
@@ -98,7 +102,19 @@ class Water:
     pressure: Q_
     composition: Dict[str, Q_]
     z: Q_
+    enthalpy: Optional[Q_] = None
+    heat_transfer_rate: Optional[Q_] = None
+    quality: Optional[Q_] = None
+    phase: Optional[str] = None
+    saturation_temperature: Optional[Q_] = None
 
+@dataclass
+class GasStreamProfile:
+    points: List[GasStream]
+
+@dataclass
+class WaterStreamProfile:
+    points: List[Water]
 
 @dataclass
 class Environment:

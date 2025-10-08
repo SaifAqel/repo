@@ -1,5 +1,4 @@
 from heat_transfer.config.loader import ConfigLoader
-from heat_transfer.calc_ops.stream_with_calc import GasStream, Water
 from heat_transfer.fluid_props.GasProps import GasProps
 from heat_transfer.fluid_props.WaterProps import WaterProps
 from heat_transfer.runner.ChainStages import ChainStages
@@ -19,32 +18,16 @@ def run(config_path: str, mech_yaml_path: str):
     gas_props = GasProps(ct.Solution(mech_yaml_path))
     water_props = WaterProps()
 
-    gas = cfg.gas_inlet
-    gas_stream = GasStream(
-        mass_flow_rate=gas.mass_flow_rate,
-        temperature=gas.temperature,
-        pressure=gas.pressure,
-        composition=gas.composition,
-        spectroscopic_data=gas.spectroscopic_data,
-        z=gas.z
-    )
-    
-    water = cfg.water_inlet
-    water_stream = Water(
-        mass_flow_rate=water.mass_flow_rate,
-        temperature=water.temperature,
-        pressure=water.pressure,
-        composition=water.composition,
-        z=water.z
-    )
+    gas_inlet = cfg.gas_inlet
+    water_inlet = cfg.water_inlet
 
     chain = ChainStages(
         cfg_with_calc=cfg_with_calc,
         gas_props=gas_props,
-        water_stream=water_stream,
-        gas_stream=gas_stream,
+        water_stream=water_inlet,
+        gas_stream=gas_inlet,
         water_props=water_props
     )
-    z, T, p, Q_dot = chain.run_chain()
+    gas_profile, water_profile = chain.run_chain()
 
-    return z, T, p, Q_dot
+    return gas_profile, water_profile

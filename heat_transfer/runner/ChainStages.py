@@ -3,6 +3,7 @@
 from typing import List, Tuple
 import numpy as np
 from common.units import ureg, Q_
+from heat_transfer.config.models import WaterStreamProfile, GasStreamProfile
 from heat_transfer.calc_ops.stage_with_calc import PassWithCalc, ReversalWithCalc, ConfigWithCalc
 from heat_transfer.calc_ops.stream_with_calc import GasStream, GasStreamWithCalc, Water, WaterWithCalc
 from heat_transfer.fluid_props.GasProps import GasProps
@@ -52,8 +53,8 @@ class ChainStages:
     ):
         self.cfg = cfg_with_calc
         self.gas_props = gas_props
-        self.water_stream = water_stream
-        self.gas_stream = gas_stream  # Mutable; updated across stages
+        self.water_inlet = water_stream  # Keep inlet immutable
+        self.gas_inlet = gas_stream  # Keep inlet immutable
         self.water_props = water_props
         
         # Define stage sequence. Insert placeholders where appropriate.
@@ -77,46 +78,103 @@ class ChainStages:
             )
         ]
 
-    def run_chain(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def run_chain(self) -> Tuple[GasStreamProfile, WaterStreamProfile]:
         """
         Run the chained simulation.
-        Returns: z_total, T_total, p_total, Q_dot_total (all numpy arrays)
+        Returns GasStreamProfile and WaterStreamProfile, each containing a list of instances along z.
         """
-        z_total = np.array([])
-        T_total = np.array([])
-        p_total = np.array([])
-        Q_dot_total = np.array([])
+        gas_points: List[GasStream] = []
+        water_points: List[Water] = []
         current_z = 0.0
+        current_gas_T = self.gas_inlet.temperature
+        current_gas_p = self.gas_inlet.pressure
+
+        # Initial water calc to get starting h
+        initial_water_calc = WaterWithCalc(
+            water_stream=self.water_inlet,
+            water_props=self.water_props
+        )
+        current_water_h = initial_water_calc.enthalpy
 
         for stage in self.stages:
             # Handle reversal inlet nozzle if applicable
+            nozzle_applied = False
             if isinstance(stage, ReversalWithCalc):
                 # Assume K=0.5 for contraction; refine later
                 nozzle_in = Nozzle(
                     geom=stage.nozzles.inlet,
-                    gas_stream=self.gas_stream,
+                    gas_stream=self.gas_inlet,  # Use inlet for fixed props
                     gas_props=self.gas_props,
                     K=Q_(0.5, ureg.dimensionless)
                 )
                 T_new, p_new = nozzle_in.apply(
-                    self.gas_stream.temperature,
-                    self.gas_stream.pressure,
-
+                    current_gas_T,
+                    current_gas_p,
                 )
-                self.gas_stream.temperature = Q_(T_new)
-                self.gas_stream.pressure = Q_(p_new)
+                # Add point after nozzle at advanced z
+                z_after_nozzle = current_z + stage.nozzles.inlet.length.magnitude
+                gas_point_nozzle = GasStream(
+                    mass_flow_rate=self.gas_inlet.mass_flow_rate,
+                    temperature=Q_(T_new.magnitude, 'kelvin'),
+                    pressure=Q_(p_new.magnitude, 'pascal'),
+                    composition=self.gas_inlet.composition,
+                    spectroscopic_data=self.gas_inlet.spectroscopic_data,
+                    z=Q_(z_after_nozzle, 'm'),
+                    heat_transfer_rate=None,  # No heat in nozzle
+                    velocity=None,
+                    reynolds_number=None,
+                    density=None
+                )
+                gas_points.append(gas_point_nozzle)
 
+                # Water point at same z (no change)
+                water_point_nozzle = Water(
+                    mass_flow_rate=self.water_inlet.mass_flow_rate,
+                    temperature=self.water_inlet.temperature,  # Will update later if needed
+                    pressure=self.water_inlet.pressure,
+                    composition=self.water_inlet.composition,
+                    z=Q_(z_after_nozzle, 'm'),
+                    enthalpy=current_water_h,
+                    heat_transfer_rate=None,
+                    quality=None,
+                    phase=None,
+                    saturation_temperature=None
+                )
+                water_points.append(water_point_nozzle)
 
-                        # Create stage-specific gas calc
+                # Update currents
+                current_gas_T = Q_(T_new.magnitude, 'kelvin')
+                current_gas_p = Q_(p_new.magnitude, 'pascal')
+                current_z = z_after_nozzle
+                nozzle_applied = True
+
+            # Create temporary stream objects for calcs
+            temp_gas_stream = GasStream(
+                mass_flow_rate=self.gas_inlet.mass_flow_rate,
+                temperature=current_gas_T,
+                pressure=current_gas_p,
+                composition=self.gas_inlet.composition,
+                spectroscopic_data=self.gas_inlet.spectroscopic_data,
+                z=Q_(current_z, 'm')
+            )
+            temp_water_stream = Water(
+                mass_flow_rate=self.water_inlet.mass_flow_rate,
+                temperature=self.water_inlet.temperature,  # Temp, updated in loop
+                pressure=self.water_inlet.pressure,
+                composition=self.water_inlet.composition,
+                z=Q_(current_z, 'm')
+            )
+
+            # Create stage-specific gas calc
             gas_calc = GasStreamWithCalc(
                 gas_props=self.gas_props,
-                gas_stream=self.gas_stream,
+                gas_stream=temp_gas_stream,
                 geometry=stage
             )
 
             water_calc = WaterWithCalc(
-                water_stream = self.water_stream,
-                water_props = self.water_props
+                water_stream=temp_water_stream,
+                water_props=self.water_props
             )
 
             # prepare water helpers for this stage
@@ -132,8 +190,7 @@ class ChainStages:
             )
 
             # Initial conditions: gas T, gas p, system-level water enthalpy
-            h0_sys = water_calc.enthalpy
-            y0 = [self.gas_stream.temperature.magnitude, self.gas_stream.pressure.magnitude, h0_sys.to('J/kg').magnitude]
+            y0 = [current_gas_T.magnitude, current_gas_p.magnitude, current_water_h.to('J/kg').magnitude]
             z_span = (0, stage.geometry.inner_length.magnitude)
 
             # Solve ODE
@@ -149,38 +206,109 @@ class ChainStages:
 
             # Compute Q_dot per axial point using paired gas T and water h
             Q_dot_stage = []
-            for ti, hi in zip(T_stage, h_stage):
-                ode.gas.gas_stream.temperature = Q_(ti, 'kelvin')
+            T_water_stage = []
+            for i in range(len(T_stage)):
+                ode.gas.gas_stream.temperature = Q_(T_stage[i], 'kelvin')
                 # set local water temperature for HeatSystem only (transient)
-                T_w_local = converter.T_from_h(Q_(hi, 'J/kg'), water_calc.water_stream.pressure)
+                hi = Q_(h_stage[i], 'J/kg')
+                T_w_local = converter.T_from_h(hi, water_calc.water_stream.pressure)
                 water_calc.water_stream.temperature = T_w_local
-                Q_dot_stage.append(ode.heat_system.q_.magnitude)
-            Q_dot_stage = np.array(Q_dot_stage)
+                Q_dot = ode.heat_system.q_
+                Q_dot_stage.append(Q_dot.magnitude)
+                T_water_stage.append(T_w_local.magnitude)
 
-            # Append to totals
-            z_total = np.append(z_total, z_stage)
-            T_total = np.append(T_total, T_stage)
-            p_total = np.append(p_total, p_stage)
-            Q_dot_total = np.append(Q_dot_total, Q_dot_stage)
+                # Temporarily update calcs for additional properties
+                temp_gas_stream.temperature = Q_(T_stage[i], 'kelvin')
+                temp_gas_stream.pressure = Q_(p_stage[i], 'pascal')
+                gas_calc = GasStreamWithCalc(
+                    gas_props=self.gas_props,
+                    gas_stream=temp_gas_stream,
+                    geometry=stage
+                )
+                water_calc.water_stream.temperature = T_w_local
+                water_calc.water_stream.pressure = self.water_inlet.pressure  # Assume constant
 
-            # Update current position and inlet for next stage (gas)
+                # Create gas point with additional props
+                gas_point = GasStream(
+                    mass_flow_rate=self.gas_inlet.mass_flow_rate,
+                    temperature=Q_(T_stage[i], 'kelvin'),
+                    pressure=Q_(p_stage[i], 'pascal'),
+                    composition=self.gas_inlet.composition,
+                    spectroscopic_data=self.gas_inlet.spectroscopic_data,
+                    z=Q_(z_stage[i], 'm'),
+                    heat_transfer_rate=Q_(Q_dot_stage[i], 'W/m'),
+                    velocity=gas_calc.velocity,
+                    reynolds_number=gas_calc.reynolds_number,
+                    density=gas_calc.density
+                )
+                gas_points.append(gas_point)
+
+                # Create water point with additional props
+                water_point = Water(
+                    mass_flow_rate=self.water_inlet.mass_flow_rate,
+                    temperature=T_w_local,
+                    pressure=self.water_inlet.pressure,
+                    composition=self.water_inlet.composition,
+                    z=Q_(z_stage[i], 'm'),
+                    enthalpy=hi,
+                    heat_transfer_rate=Q_(Q_dot_stage[i], 'W/m'),
+                    quality=water_calc.quality,
+                    phase=water_calc.phase,
+                    saturation_temperature=water_calc.saturation_temperature
+                )
+                water_points.append(water_point)
+
+            # Update current position and states for next stage
             current_z += z_span[1]
-            self.gas_stream.temperature = Q_(T_stage[-1], 'kelvin')
-            self.gas_stream.pressure = Q_(p_stage[-1], 'pascal')
+            current_gas_T = Q_(T_stage[-1], 'kelvin')
+            current_gas_p = Q_(p_stage[-1], 'pascal')
+            current_water_h = Q_(h_stage[-1], 'J/kg')
 
-            # update system-level water enthalpy for next stage
-            # Get final enthalpy from ODE solution
-            h_end = Q_(h_stage[-1], 'J/kg')
+            # If reversal, handle outlet nozzle similarly
+            if isinstance(stage, ReversalWithCalc):
+                nozzle_out = Nozzle(
+                    geom=stage.nozzles.outlet,
+                    gas_stream=self.gas_inlet,
+                    gas_props=self.gas_props,
+                    K=Q_(0.5, ureg.dimensionless)  # Assume same K
+                )
+                T_new, p_new = nozzle_out.apply(
+                    current_gas_T,
+                    current_gas_p,
+                )
+                z_after_outlet = current_z + stage.nozzles.outlet.length.magnitude
+                gas_point_outlet = GasStream(
+                    mass_flow_rate=self.gas_inlet.mass_flow_rate,
+                    temperature=Q_(T_new.magnitude, 'kelvin'),
+                    pressure=Q_(p_new.magnitude, 'pascal'),
+                    composition=self.gas_inlet.composition,
+                    spectroscopic_data=self.gas_inlet.spectroscopic_data,
+                    z=Q_(z_after_outlet, 'm'),
+                    heat_transfer_rate=None,
+                    velocity=None,
+                    reynolds_number=None,
+                    density=None
+                )
+                gas_points.append(gas_point_outlet)
 
-            # Convert enthalpy to temperature using your converter
-            T_end = converter.T_from_h(h_end, water_calc.water_stream.pressure)
-            water_calc.water_stream.temperature = T_end
+                water_point_outlet = Water(
+                    mass_flow_rate=self.water_inlet.mass_flow_rate,
+                    temperature=converter.T_from_h(current_water_h, self.water_inlet.pressure),
+                    pressure=self.water_inlet.pressure,
+                    composition=self.water_inlet.composition,
+                    z=Q_(z_after_outlet, 'm'),
+                    enthalpy=current_water_h,
+                    heat_transfer_rate=None,
+                    quality=water_calc.quality,  # Use last calc
+                    phase=water_calc.phase,
+                    saturation_temperature=water_calc.saturation_temperature
+                )
+                water_points.append(water_point_outlet)
 
+                current_gas_T = Q_(T_new.magnitude, 'kelvin')
+                current_gas_p = Q_(p_new.magnitude, 'pascal')
+                current_z = z_after_outlet
 
-
-        final_h = water_calc.enthalpy
-        final_T = WaterStateConverter(water_calc).T_from_h(final_h, water_calc.water_stream.pressure)
-        water_calc.water_stream.temperature = final_T
-
-
-        return z_total, T_total, p_total, Q_dot_total
+        gas_profile = GasStreamProfile(points=gas_points)
+        water_profile = WaterStreamProfile(points=water_points)
+        return gas_profile, water_profile
