@@ -25,8 +25,7 @@ class DrumWithCalc:
         return pi * (do/2)**2
 
 @dataclass
-class PassWithCalc:
-    Pass: Pass
+class PassWithCalc(Pass):
     shell: DrumWithCalc
 
     @property
@@ -72,6 +71,8 @@ class PassWithCalc:
     
 @dataclass
 class ReversalWithCalc(Reversal):
+    shell: DrumWithCalc
+
     @property
     def tube_inner_flow_area(self) -> Q_:
         di = self.geometry.inner_diameter
@@ -130,11 +131,11 @@ def with_calc(cfg: Config) -> ConfigWithCalc:
     s = cfg.stages
     stages_calc = StagesWithCalc(
         drum=DrumWithCalc(geometry=s.drum.geometry, surfaces=s.drum.surfaces),
-        pass1=PassWithCalc(geometry=s.pass1.geometry, surfaces=s.pass1.surfaces),
-        reversal1=ReversalWithCalc(geometry=s.reversal1.geometry, surfaces=s.reversal1.surfaces, nozzles=s.reversal1.nozzles),
-        pass2=PassWithCalc(geometry=s.pass2.geometry, surfaces=s.pass2.surfaces),
-        reversal2=ReversalWithCalc(geometry=s.reversal2.geometry, surfaces=s.reversal2.surfaces, nozzles=s.reversal2.nozzles),
-        pass3=PassWithCalc(geometry=s.pass3.geometry, surfaces=s.pass3.surfaces),
+        pass1=PassWithCalc(geometry=s.pass1.geometry, surfaces=s.pass1.surfaces, shell = DrumWithCalc),
+        reversal1=ReversalWithCalc(geometry=s.reversal1.geometry, surfaces=s.reversal1.surfaces, nozzles=s.reversal1.nozzles, shell = DrumWithCalc),
+        pass2=PassWithCalc(geometry=s.pass2.geometry, surfaces=s.pass2.surfaces, shell = DrumWithCalc),
+        reversal2=ReversalWithCalc(geometry=s.reversal2.geometry, surfaces=s.reversal2.surfaces, nozzles=s.reversal2.nozzles, shell = DrumWithCalc),
+        pass3=PassWithCalc(geometry=s.pass3.geometry, surfaces=s.pass3.surfaces, shell = DrumWithCalc),
     )
     return ConfigWithCalc(
         gas_inlet=cfg.gas_inlet,
