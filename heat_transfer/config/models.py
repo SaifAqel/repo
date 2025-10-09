@@ -64,7 +64,7 @@ class Shell:
 
 @dataclass(frozen=True)
 class TubeBank:
-    geom: TubeGeometry
+    geometry: TubeGeometry
     layout: BankLayout
 
 @dataclass(frozen=True)
@@ -81,19 +81,19 @@ class ReversalChamber:
 
 @dataclass(frozen=True)
 class FirePass:
-    geom: TubeGeometry
+    geometry: TubeGeometry
     wall: Wall
     shell: Shell
 
 @dataclass(frozen=True)
 class SmokePass:
-    geom: TubeBank
+    geometry: TubeBank
     wall: Wall
     shell: Shell
 
 @dataclass(frozen=True)
 class Reversal:
-    geom: ReversalChamber
+    geometry: ReversalChamber
     wall: Wall
     shell: Shell
 
