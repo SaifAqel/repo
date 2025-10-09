@@ -4,6 +4,7 @@ from scipy.integrate import solve_ivp
 from common.units import Q_, ureg
 from heat_transfer.config.models import GasStream, WaterStream
 from heat_transfer.functions.UA import UA
+from iapws import IAPWS97
 
 @dataclass
 class HeatStageSolver:
@@ -15,12 +16,17 @@ class HeatStageSolver:
         Tg, pg, hw = y
         TgQ, pgQ, hwQ = Q_(Tg, "K"), Q_(pg, "Pa"), Q_(hw, "J/kg")
 
-        Tc_starQ, _ = self.water.map_state(hwQ)
-        Tc_star = Tc_starQ.to("K").magnitude
+        # sync stream state for property-based model
+        self.gas.temperature = TgQ
+        self.gas.pressure = pgQ
 
-        rho_g = self.gas.density(TgQ, pgQ).to("kg/m^3").magnitude
-        cp_g  = self.gas.specific_heat(TgQ, pgQ).to("J/(kg*K)").magnitude
-        fD    = self.gas.friction_factor(TgQ, pgQ)
+        PwQ = self.water.pressure
+        w = IAPWS97(P=PwQ.to("megapascal").magnitude, h=hwQ.to("kJ/kg").magnitude)
+        Tc_star = Q_(w.T, "K").to("K").magnitude
+
+        rho_g = self.gas.density.to("kg/m^3").magnitude        # property, no call
+        cp_g  = self.gas.specific_heat.to("J/(kg*K)").magnitude # property, no call
+        fD    = self.gas.friction_factor                        # property
 
         D = self.geom.geometry.inner_diameter.to("m").magnitude
         A = (pi * D**2 / 4)
@@ -29,7 +35,7 @@ class HeatStageSolver:
         m_w = self.water.mass_flow_rate.to("kg/s").magnitude
         v_g = m_g / (rho_g * A)
 
-        U = UA.UA(self)
+        U = UA(self).UA
 
         dTgdx = -(U * P / (m_g * cp_g)) * (Tg - Tc_star)
         dpdx  = - fD * rho_g * v_g**2 / (2 * D)
@@ -43,5 +49,4 @@ class HeatStageSolver:
             self.gas.pressure.to("Pa").magnitude,
             self.water.enthalpy.to("J/kg").magnitude,
         ]
-        sol = solve_ivp(self.rhs, [0, L], y0, dense_output=True)
-        return sol
+        return solve_ivp(self.rhs, [0, L], y0)

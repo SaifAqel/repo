@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict
 from common.units import ureg, Q_
-from math import exp, log, sqrt, log10
+from math import exp, log, sqrt, log10, pi
 from heat_transfer.functions.fluid_props import WaterProps, GasProps
 from heat_transfer.functions.htc_water import HTCFunctions
 
@@ -37,12 +37,19 @@ class TubeGeometry:
     inner_diameter: Q_
     inner_length: Q_
 
+    @property
+    def flow_area(self) -> Q_:
+        return ( pi * self.inner_diameter / 2 )**2
+
 @dataclass(frozen=True)
-class ReversalChamberGeometry:
+class ReversalGeometry:
+    nozzles: Nozzles
     pass
 
 @dataclass(frozen=True)
-class BankLayout:
+class BankGeometry:
+    tube_inner_diameter: Q_
+    tube_inner_length: Q_
     tubes_number: Q_
     shape: str
     pitch: Q_
@@ -61,23 +68,21 @@ class Shell:
 
 @dataclass(frozen=True)
 class FirePass:
-    geometry: TubeGeometry
+    hot_side: TubeGeometry
     wall: Wall
-    shell: Shell
+    cold_side: Shell
 
 @dataclass(frozen=True)
 class SmokePass:
-    geometry: TubeGeometry
-    layout: BankLayout
+    hot_side: BankGeometry
     wall: Wall
-    shell: Shell
+    cold_side: Shell
 
 @dataclass(frozen=True)
 class Reversal:
-    geometry: ReversalChamberGeometry
-    nozzles: Nozzles
+    hot_side: ReversalGeometry
     wall: Wall
-    shell: Shell
+    cold_side: Shell
 
 @dataclass(frozen=True)
 class HotSide:
@@ -121,31 +126,31 @@ class GasStream:
 
         @property
         def density(self) -> Q_:
-            return self.gas_props.density(self.gas_stream.temperature, self.gas_stream.pressure, self.gas_stream.composition)
+            return self.gas_props.density(self.temperature, self.pressure, self.composition)
         
         @property
         def specific_heat(self) -> Q_:
-            return self.gas_props.cp(self.gas_stream.temperature, self.gas_stream.pressure, self.gas_stream.composition)
+            return self.gas_props.cp(self.temperature, self.pressure, self.composition)
         
         @property
         def dynamic_viscosity(self) -> Q_:
-            return self.gas_props.viscosity(self.gas_stream.temperature, self.gas_stream.pressure, self.gas_stream.composition)
+            return self.gas_props.viscosity(self.temperature, self.pressure, self.composition)
         
         @property
         def thermal_conductivity(self) -> Q_:
-            return self.gas_props.thermal_conductivity(self.gas_stream.temperature, self.gas_stream.pressure, self.gas_stream.composition)
+            return self.gas_props.thermal_conductivity(self.temperature, self.pressure, self.composition)
         
         @property
         def mass_flux(self) -> Q_:
-            return self.gas_stream.mass_flow_rate / self.geometry.tube_inner_flow_area
+            return self.mass_flow_rate / self.stage.tube_inner_flow_area
 
         @property
         def velocity(self) -> Q_:
-            return self.gas_stream.mass_flow_rate / (self.density * self.geometry.tube_inner_flow_area)
+            return self.mass_flow_rate / (self.density * self.stage.tube_inner_flow_area)
 
         @property
         def reynolds_number(self) -> Q_:
-            return (self.density * self.velocity * self.geometry.geometry.inner_diameter) / self.dynamic_viscosity
+            return (self.density * self.velocity * self.stage.geometry.inner_diameter) / self.dynamic_viscosity
         
         @property
         def prandt_number(self) -> Q_:
@@ -161,26 +166,26 @@ class GasStream:
         
         @property
         def convective_coefficient(self) -> Q_:
-            return self.nusselt_number * self.thermal_conductivity / self.geometry.geometry.inner_diameter
+            return self.nusselt_number * self.thermal_conductivity / self.stage.geometry.inner_diameter
         
         @property
         def absorption_coefficient (self) -> Q_:
-            return sum(self.gas_stream.composition[s] * self.gas_stream.spectroscopic_data[s] for s in self.gas_stream.composition)
+            return sum(self.composition[s] * self.spectroscopic_data[s] for s in self.composition)
 
         @property
         def emmissivity(self) -> Q_:
-            return 1.0 - exp(-self.absorption_coefficient * self.geometry.path_length)
+            return 1.0 - exp(-self.absorption_coefficient * self.stage.path_length)
             
         def radiation_coefficient(self, T_wall) -> Q_:
             sigma = 5.670374419e-8 * ureg.watt / (ureg.meter**2 * ureg.kelvin**4)
-            mean_temperature = (self.gas_stream.temperature + T_wall) / 2
+            mean_temperature = (self.temperature + T_wall) / 2
             return 4.0 * sigma * (mean_temperature**3) * self.emmissivity
 
         @property
         def friction_factor(self) -> float:
             f = 0.02 
             Re = self.reynolds_number.magnitude
-            rel_rough = self.geometry.rel_roughness
+            rel_rough = self.stage.rel_roughness
             tol = 1e-6
             max_iter = 50
 
