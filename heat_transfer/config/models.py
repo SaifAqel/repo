@@ -102,6 +102,9 @@ class Stages:
     HX_5: SmokePass
     HX_6: Economiser
 
+    def __iter__(self):
+        return iter((self.HX_1, self.HX_2, self.HX_3, self.HX_4, self.HX_5, self.HX_6))
+
 
 
 
@@ -209,18 +212,18 @@ class WaterStream:
 
         @property
         def saturation_temperature(self) -> Q_:
-            return self.water_props.Tsat(self.water_stream.pressure)
+            return self.water_props.Tsat(self.pressure)
 
         @property
         def phase(self) -> str:
             Tsat = self.saturation_temperature
-            if self.water_stream.temperature < Tsat: return "liquid"
-            if self.water_stream.temperature > Tsat: return "vapor"
+            if self.temperature < Tsat: return "liquid"
+            if self.temperature > Tsat: return "vapor"
             return "saturated"
 
         @property
         def quality(self) -> Q_:
-            P = self.water_stream.pressure
+            P = self.pressure
             if self.phase != "saturated":
                 return Q_(0.0 if self.phase == "liquid" else 1.0, "dimensionless")
 
@@ -234,8 +237,8 @@ class WaterStream:
 
         @property
         def enthalpy(self) -> Q_:
-            P = self.water_stream.pressure
-            T = self.water_stream.temperature
+            P = self.pressure
+            T = self.temperature
             if self.phase == "liquid":
                 return self.water_props.h_single(P, T)
             if self.phase == "vapor":
@@ -248,8 +251,8 @@ class WaterStream:
 
         @property
         def density(self) -> Q_:
-            P = self.water_stream.pressure
-            T = self.water_stream.temperature
+            P = self.pressure
+            T = self.temperature
             if self.phase == "liquid":
                 return self.water_props.rho_l(P, T)
             if self.phase == "vapor":
@@ -262,8 +265,8 @@ class WaterStream:
 
         @property
         def specific_heat(self) -> Q_:
-            P = self.water_stream.pressure
-            T = self.water_stream.temperature
+            P = self.pressure
+            T = self.temperature
             if self.phase == "liquid":
                 return self.water_props.cp_l(P, T)
             if self.phase == "vapor":
@@ -275,8 +278,8 @@ class WaterStream:
 
         @property
         def thermal_conductivity(self) -> Q_:
-            P = self.water_stream.pressure
-            T = self.water_stream.temperature
+            P = self.pressure
+            T = self.temperature
             if self.phase == "liquid":
                 return self.water_props.k_l(P, T)
             if self.phase == "vapor":
@@ -288,8 +291,8 @@ class WaterStream:
 
         @property
         def dynamic_viscosity(self) -> Q_:
-            P = self.water_stream.pressure
-            T = self.water_stream.temperature
+            P = self.pressure
+            T = self.temperature
             if self.phase == "liquid":
                 return self.water_props.mu_l(P, T)
             if self.phase == "vapor":
@@ -301,14 +304,14 @@ class WaterStream:
 
         @property
         def surface_tension(self) -> Q_:
-            P = self.water_stream.pressure
+            P = self.pressure
             # always use saturation T for surface tension when near boiling
-            T_use = self.saturation_temperature if self.phase != "liquid" else self.water_stream.temperature
+            T_use = self.saturation_temperature if self.phase != "liquid" else self.temperature
             return self.water_props.sigma(P, T_use)
 
         @property
         def latent_heat_of_vaporization(self) -> Q_:
-            P = self.water_stream.pressure
+            P = self.pressure
             return self.water_props.h_fg(P)
 
         @property
@@ -317,11 +320,11 @@ class WaterStream:
         
         @property
         def velocity(self) -> Q_:
-            return self.water_stream.mass_flow_rate / self.geom.shell.flow_area
+            return self.mass_flow_rate / self.stage.shell.flow_area
         
         @property
         def reynlods_number(self) -> Q_:
-            return self.density * self.velocity * self.geom.hydraulic_diamtere / self.dynamic_viscosity
+            return self.density * self.velocity * self.stage.hydraulic_diamtere / self.dynamic_viscosity
 
         @property
         def htc(self) -> Q_:

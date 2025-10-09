@@ -4,12 +4,12 @@ gas_stream:
   pressure: { value: 115000, unit: Pa }
 
   composition:
-    CO2: { value: 0.089150, unit: 1 }
-    H2O: { value: 0.169806, unit: 1 }
-    N2: { value: 0.710966, unit: 1 }
-    O2: { value: 0.017317, unit: 1 }
-    Ar: { value: 0.008456, unit: 1 }
-    SO2: { value: 0.004336, unit: 1 }
+    CO2: { value: 0.089150, unit: dimensionless }
+    H2O: { value: 0.169806, unit: dimensionless }
+    N2: { value: 0.710966, unit: dimensionless }
+    O2: { value: 0.017317, unit: dimensionless }
+    Ar: { value: 0.008456, unit: dimensionless }
+    SO2: { value: 0.004336, unit: dimensionless }
 
   spectroscopic_data:
     CO2: { value: 0.05, unit: 1/m }
@@ -25,4 +25,4 @@ water_stream:
   pressure: { value: 1000000, unit: Pa }
 
   composition:
-    H2O: { value: 1.0, unit: 1 }
+    H2O: { value: 1.0, unit: dimensionless }

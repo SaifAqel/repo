@@ -9,7 +9,7 @@ stages:
       surfaces:
         inner:
           roughness: { value: 0.000015, unit: m }
-          emissivity: { value: 0.30, unit: 1dimensionless }
+          emissivity: { value: 0.30, unit: dimensionless }
           fouling_thickness: { value: 0.0001, unit: m }
           fouling_conductivity: { value: 0.20, unit: W/m/K }
         outer:

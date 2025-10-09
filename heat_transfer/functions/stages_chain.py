@@ -3,7 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from common.units import Q_
-from heat_transfer.models.streams import GasStream, WaterStream
+from heat_transfer.config.models import GasStream, WaterStream
 from heat_transfer.functions.stage_solver import HeatStageSolver
 
 
@@ -18,11 +18,12 @@ class MinCounterflowChain:
         TgQ = self.gas_in.temperature.to("K")
         pgQ = self.gas_in.pressure.to("Pa")
         hwQ = hw0.to("J/kg")
+        hw_L_inlet = self.water_in.enthalpy.to("J/kg")
 
-        for geom in self.stages:
+        for geometry in self.stages:
             g = self.gas_in.with_state(temperature=TgQ, pressure=pgQ)
             w = self.water_in.with_state(enthalpy=hwQ)
-            sol = HeatStageSolver(geom=geom, gas=g, water=w).solve()
+            sol = HeatStageSolver(geometry=geometry, gas=g, water=w).solve()
             TgQ = Q_(sol.y[0, -1], "K")
             pgQ = Q_(sol.y[1, -1], "Pa")
             hwQ = Q_(sol.y[2, -1], "J/kg")
@@ -30,6 +31,8 @@ class MinCounterflowChain:
         return hwQ  # hw at x = L
 
     def run(self, tol: Q_ = Q_(50.0, "J/kg"), max_iter: int = 10):
+        
+        hw_L_inlet = self.water_in.enthalpy.to("J/kg")
 
         h0a = hw_L_inlet.to("J/kg")
         h0b = Q_(h0a.magnitude * 0.99, "J/kg")

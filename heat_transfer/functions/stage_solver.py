@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from math import pi
 from scipy.integrate import solve_ivp
 from common.units import Q_, ureg
-from heat_transfer.models.streams import GasStream, WaterStream
+from heat_transfer.config.models import GasStream, WaterStream
 from heat_transfer.functions.UA import UA
 
 @dataclass

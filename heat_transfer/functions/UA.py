@@ -1,6 +1,6 @@
 from math import log
 from common.units import ureg, Q_
-from heat_transfer.models.streams import GasStream, WaterStream
+from heat_transfer.config.models import GasStream, WaterStream
 from dataclasses import dataclass
 
 @dataclass
