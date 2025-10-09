@@ -36,14 +36,10 @@ class Nozzles:
 class TubeGeometry:
     inner_diameter: Q_
     inner_length: Q_
-    
-
 
 @dataclass(frozen=True)
 class ReversalChamberGeometry:
     pass
-
-
 
 @dataclass(frozen=True)
 class BankLayout:
@@ -61,21 +57,6 @@ class Shell:
     geometry: ShellGeometry
     wall: Wall
 
-@dataclass(frozen=True)
-class TubeBank:
-    geometry: TubeGeometry
-    layout: BankLayout
-
-@dataclass(frozen=True)
-class ReversalChamber:
-    geometry: ReversalChamberGeometry
-    nozzles: Nozzles
-    wall: Wall
-
-
-
-
-
 
 
 @dataclass(frozen=True)
@@ -86,13 +67,15 @@ class FirePass:
 
 @dataclass(frozen=True)
 class SmokePass:
-    geometry: TubeBank
+    geometry: TubeGeometry
+    layout: BankLayout
     wall: Wall
     shell: Shell
 
 @dataclass(frozen=True)
 class Reversal:
-    geometry: ReversalChamber
+    geometry: ReversalChamberGeometry
+    nozzles: Nozzles
     wall: Wall
     shell: Shell
 

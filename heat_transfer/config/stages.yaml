@@ -37,13 +37,13 @@ stages:
             fouling_conductivity: { value: 0.2, unit: W/m/K }
 
   HX_2:
-    geometry: { value: 1, unit: dimensionless }
+    geometry: {}
     nozzles:
-      inner: { value: 1, unit: dimensionless }
-      outer: { value: 1, unit: dimensionless }
+      inner: {}
+      outer: {}
     wall:
       thickness: { value: 0.0029, unit: m }
-      conductivity: { value: 16, unit: W/(m*K) }
+      conductivity: { value: 16, unit: W/m/K }
       surfaces:
         inner:
           roughness: { value: 0.000015, unit: m }
@@ -57,8 +57,8 @@ stages:
           fouling_conductivity: { value: 0.2, unit: W/m/K }
     shell:
       geometry:
-        flow_area: { value, unit: m^2 }
-        wetted_perimeter: { value, unit: m }
+        flow_area: { value: 1, unit: m^2 }
+        wetted_perimeter: { value: 1, unit: m }
       wall:
         thickness: { value: 0.01, unit: m }
         conductivity: { value: 45, unit: W/m/K }
@@ -116,17 +116,17 @@ stages:
             fouling_conductivity: { value: 0.2, unit: W/m/K }
 
   HX_4:
-    geometry: { value: 1, unit: dimensionless }
+    geometry: {}
     nozzles:
-      inner: { value: 1, unit: dimensionless }
-      outer: { value: 1, unit: dimensionless }
+      inner: {}
+      outer: {}
     wall:
       thickness: { value: 0.0029, unit: m }
       conductivity: { value: 16, unit: W/(m*K) }
       surfaces:
         inner:
           roughness: { value: 0.000015, unit: m }
-          emissivity: { value: 0.30, unit: 1dimensionless }
+          emissivity: { value: 0.30, unit: dimensionless }
           fouling_thickness: { value: 0.0001, unit: m }
           fouling_conductivity: { value: 0.20, unit: W/m/K }
         outer:
@@ -136,8 +136,8 @@ stages:
           fouling_conductivity: { value: 0.2, unit: W/m/K }
     shell:
       geometry:
-        flow_area: { value, unit: m^2 }
-        wetted_perimeter: { value, unit: m }
+        flow_area: { value: 1, unit: m^2 }
+        wetted_perimeter: { value: 1, unit: m }
       wall:
         thickness: { value: 0.01, unit: m }
         conductivity: { value: 45, unit: W/m/K }

@@ -1,24 +1,27 @@
 # loader.py
 from __future__ import annotations
-from typing import Dict, Tuple, Any
 import yaml
+from typing import Dict, Tuple, Any
 from common.units import ureg, Q_
-from heat_transfer.models.streams import GasStream, WaterStream
-
-from dataclasses import replace
-
-from heat_transfer.models.stages import (
+from heat_transfer.config.models import (
     Surface, Surfaces, Wall, Nozzle, Nozzles,
     TubeGeometry, ReversalChamberGeometry, BankLayout,
     ShellGeometry, Shell, TubeBank, ReversalChamber,
-    FirePass, SmokePass, Reversal, HotSide, ColdSide, Economiser, Stages
+    FirePass, SmokePass, Reversal, HotSide, ColdSide, Economiser, Stages,
+    WaterStream, GasStream
 )
 
 def _q(node: Dict) -> Q_:
-        return  
+    if not node:  # allow None
+        return None
+    v = node.get("value")
+    u = node.get("unit", "")
+    if v is None:
+        return None
+    return Q_(v, u)
 
 def _qd(mapping: Dict[str, Dict]) -> Dict[str, Q_]:
-        return {k: _q(v) for k, v in mapping.items()}
+    return {k: _q(v) for k, v in (mapping or {}).items()}
 
     
 
@@ -67,11 +70,11 @@ def _wall(n: Dict[str, Any]) -> Wall:
     )
 
 def _shell(n: Dict[str, Any]) -> Shell:
-    geom = ShellGeometry(
+    geometry = ShellGeometry(
         flow_area=_q((n.get("geometry") or {}).get("flow_area")),
         wetted_perimeter=_q((n.get("geometry") or {}).get("wetted_perimeter")),
     )
-    return Shell(geometry=geom, wall=_wall(n.get("wall", {})))
+    return Shell(geometry=geometry, wall=_wall(n.get("wall", {})))
 
 def _tube_geom(n: Dict[str, Any]) -> TubeGeometry:
     return TubeGeometry(
@@ -106,7 +109,7 @@ def load_stages_from_yaml(yaml_path: str) -> Stages:
     # HX_2 -> Reversal
     hx2 = stages.get("HX_2", {})
     reversal2 = Reversal(
-        geom=ReversalChamber(
+        geometry=ReversalChamber(
             geometry=ReversalChamberGeometry(),
             nozzles=_nozzles(hx2.get("nozzles", {})),
         ),
