@@ -1,0 +1,72 @@
+environment:
+  ambient_temperature: { value: 298.15, unit: "K" }
+  radiative_temperature: { value: 298.15, unit: "K" }
+  external_emissivity: { value: 0.85, unit: "-" }
+  external_h: { value: 8, unit: "W/(m^2·K)" }
+  radiation_view_factor_external: { value: 1.0, unit: "-" }
+
+stages:
+  drum:
+    geometry:
+      inner_diameter: { value: 3.150, unit: "m" }
+      inner_length: { value: 5.620, unit: "m" }
+
+  reversal1:
+    geometry:
+      inner_diameter: { value: 0.80, unit: "m" }
+      inner_length: { value: 1.0, unit: "m" }
+      wall:
+        properties:
+          thickness: { value: 0.012, unit: "m" }
+          conductivity: { value: 45, unit: "W/(m·K)" }
+    nozzles:
+      inlet:
+        diameter: { value: 0.40, unit: "m" }
+        length: { value: 0.50, unit: "m" }
+      outlet:
+        diameter: { value: 0.40, unit: "m" }
+        length: { value: 0.50, unit: "m" }
+    surfaces:
+      inner:
+        roughness: { value: 0.00002, unit: "m" }
+        emissivity: { value: 0.80, unit: "-" }
+        fouling_thickness: { value: 0.0001, unit: "m" }
+        fouling_conductivity: { value: 0.20, unit: "W/(m·K)" }
+      outer:
+        roughness: { value: 0.00002, unit: "m" }
+        emissivity: { value: 0.85, unit: "-" }
+        fouling_thickness: { value: 0.0001, unit: "m" }
+        fouling_conductivity: { value: 0.20, unit: "W/(m·K)" }
+    shell:
+      flow_area: { value: 1.0, unit: "m**2" }
+      wetted_perimeter: { value: 1.0, unit: "m" }
+
+  reversal2:
+    geometry:
+      inner_diameter: { value: 0.80, unit: "m" }
+      inner_length: { value: 1.0, unit: "m" }
+      wall:
+        properties:
+          thickness: { value: 0.012, unit: "m" }
+          conductivity: { value: 45, unit: "W/(m·K)" }
+    nozzles:
+      inlet:
+        diameter: { value: 0.40, unit: "m" }
+        length: { value: 0.50, unit: "m" }
+      outlet:
+        diameter: { value: 0.40, unit: "m" }
+        length: { value: 0.50, unit: "m" }
+    surfaces:
+      inner:
+        roughness: { value: 0.00002, unit: "m" }
+        emissivity: { value: 0.80, unit: "-" }
+        fouling_thickness: { value: 0.0001, unit: "m" }
+        fouling_conductivity: { value: 0.20, unit: "W/(m·K)" }
+      outer:
+        roughness: { value: 0.00002, unit: "m" }
+        emissivity: { value: 0.85, unit: "-" }
+        fouling_thickness: { value: 0.0001, unit: "m" }
+        fouling_conductivity: { value: 0.20, unit: "W/(m·K)" }
+    shell:
+      flow_area: { value: 1.0, unit: "m**2" }
+      wetted_perimeter: { value: 1.0, unit: "m" }

@@ -4,9 +4,7 @@ from common.units import ureg, Q_
 from math import pi
 
 @dataclass
-class DrumWithCalc:
-
-    geom: Drum
+class DrumWithCalc(Drum):
 
     @property
     def cross_section_inner_area(self) -> Q_:
@@ -26,7 +24,6 @@ class DrumWithCalc:
 
 @dataclass
 class PassWithCalc(Pass):
-    shell: DrumWithCalc
 
     @property
     def tube_inner_flow_area(self) -> Q_:
@@ -69,9 +66,12 @@ class PassWithCalc(Pass):
         """Characteristic path length for radiation calculations."""
         return self.geometry.inner_diameter * 0.9
     
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return 4 * self.shell.flow_area / self.shell.wetted_perimeter
+    
 @dataclass
 class ReversalWithCalc(Reversal):
-    shell: DrumWithCalc
 
     @property
     def tube_inner_flow_area(self) -> Q_:
@@ -112,6 +112,10 @@ class ReversalWithCalc(Reversal):
     @property
     def path_length(self) -> Q_:
         return self.geometry.inner_diameter  # Mean beam ~di for chamber
+    
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return 4 * self.shell.flow_area / self.shell.wetted_perimeter
 
 @dataclass
 class StagesWithCalc(Stages):
@@ -131,11 +135,11 @@ def with_calc(cfg: Config) -> ConfigWithCalc:
     s = cfg.stages
     stages_calc = StagesWithCalc(
         drum=DrumWithCalc(geometry=s.drum.geometry, surfaces=s.drum.surfaces),
-        pass1=PassWithCalc(geometry=s.pass1.geometry, surfaces=s.pass1.surfaces, shell = DrumWithCalc),
-        reversal1=ReversalWithCalc(geometry=s.reversal1.geometry, surfaces=s.reversal1.surfaces, nozzles=s.reversal1.nozzles, shell = DrumWithCalc),
-        pass2=PassWithCalc(geometry=s.pass2.geometry, surfaces=s.pass2.surfaces, shell = DrumWithCalc),
-        reversal2=ReversalWithCalc(geometry=s.reversal2.geometry, surfaces=s.reversal2.surfaces, nozzles=s.reversal2.nozzles, shell = DrumWithCalc),
-        pass3=PassWithCalc(geometry=s.pass3.geometry, surfaces=s.pass3.surfaces, shell = DrumWithCalc),
+        pass1=PassWithCalc(geometry=s.pass1.geometry, surfaces=s.pass1.surfaces, shell=s.pass1.shell),
+        reversal1=ReversalWithCalc(geometry=s.reversal1.geometry, surfaces=s.reversal1.surfaces, nozzles=s.reversal1.nozzles, shell=s.reversal1.shell),
+        pass2=PassWithCalc(geometry=s.pass2.geometry, surfaces=s.pass2.surfaces, shell=s.pass2.shell),
+        reversal2=ReversalWithCalc(geometry=s.reversal2.geometry, surfaces=s.reversal2.surfaces, nozzles=s.reversal2.nozzles, shell=s.reversal2.shell),
+        pass3=PassWithCalc(geometry=s.pass3.geometry, surfaces=s.pass3.surfaces, shell=s.pass3.shell),
     )
     return ConfigWithCalc(
         gas_inlet=cfg.gas_inlet,

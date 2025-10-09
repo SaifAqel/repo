@@ -1,7 +1,7 @@
-from heat_transfer.config.loader import ConfigLoader
-from heat_transfer.fluid_props.GasProps import GasProps
-from heat_transfer.fluid_props.WaterProps import WaterProps
-from heat_transfer.runner.ChainStages import ChainStages
+from heat_transfer.dump.loader import ConfigLoader
+from heat_transfer.functions.GasProps import GasProps
+from heat_transfer.functions.WaterProps import WaterProps
+from heat_transfer.dump.ChainStages import ChainStages
 from heat_transfer.calc_ops.stage_with_calc import with_calc
 import cantera as ct
 

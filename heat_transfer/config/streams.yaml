@@ -1,0 +1,28 @@
+gas_stream:
+  mass_flow_rate: { value: 9.427, unit: kg/s }
+  temperature: { value: 2176.59, unit: K }
+  pressure: { value: 115000, unit: Pa }
+
+  composition:
+    CO2: { value: 0.089150, unit: 1 }
+    H2O: { value: 0.169806, unit: 1 }
+    N2: { value: 0.710966, unit: 1 }
+    O2: { value: 0.017317, unit: 1 }
+    Ar: { value: 0.008456, unit: 1 }
+    SO2: { value: 0.004336, unit: 1 }
+
+  spectroscopic_data:
+    CO2: { value: 0.05, unit: 1/m }
+    H2O: { value: 0.5, unit: 1/m }
+    N2: { value: 0.000001, unit: 1/m }
+    O2: { value: 0.001, unit: 1/m }
+    Ar: { value: 0.0, unit: 1/m }
+    SO2: { value: 0.3, unit: 1/m }
+
+water_stream:
+  mass_flow_rate: { value: 3.333, unit: kg/s }
+  temperature: { value: 378.15, unit: K }
+  pressure: { value: 1000000, unit: Pa }
+
+  composition:
+    H2O: { value: 1.0, unit: 1 }

@@ -6,8 +6,8 @@ from common.units import ureg, Q_
 from heat_transfer.config.models import WaterStreamProfile, GasStreamProfile
 from heat_transfer.calc_ops.stage_with_calc import PassWithCalc, ReversalWithCalc, ConfigWithCalc
 from heat_transfer.calc_ops.stream_with_calc import GasStream, GasStreamWithCalc, Water, WaterWithCalc
-from heat_transfer.fluid_props.GasProps import GasProps
-from heat_transfer.fluid_props.WaterProps import WaterProps
+from heat_transfer.functions.GasProps import GasProps
+from heat_transfer.functions.WaterProps import WaterProps
 from heat_transfer.solver.ODE import FireTubeGasODE
 from heat_transfer.solver.nozzle import Nozzle
 from dataclasses import dataclass
@@ -61,21 +61,12 @@ class ChainStages:
         # Assuming: superheater after pass1 (hot zone), economizer after pass3 (cool zone).
         # Adjust sequence based on actual boiler design.
         self.stages = [
-            cfg_with_calc.stages.pass1,
-            # Superheater placeholder here (after first pass, hottest gas)
-            SuperheaterWithCalc(
-                geometry=cfg_with_calc.stages.pass1.geometry,  # Placeholder: copy pass1 geom; redefine later
-                surfaces=cfg_with_calc.stages.pass1.surfaces
-            ),
+            cfg_with_calc.stages.pass1,         
             cfg_with_calc.stages.reversal1,
             cfg_with_calc.stages.pass2,
             cfg_with_calc.stages.reversal2,
             cfg_with_calc.stages.pass3,
-            # Economizer placeholder here (after last pass, cooler gas)
-            EconomizerWithCalc(
-                geometry=cfg_with_calc.stages.pass3.geometry,  # Placeholder: copy pass3 geom; redefine later
-                surfaces=cfg_with_calc.stages.pass3.surfaces
-            )
+            cfg_with_calc.stages.economiszer
         ]
 
     def run_chain(self) -> Tuple[GasStreamProfile, WaterStreamProfile]:
