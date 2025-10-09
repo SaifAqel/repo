@@ -3,8 +3,7 @@ from dataclasses import dataclass
 from typing import Dict
 from common.units import ureg, Q_
 from math import exp, log, sqrt, log10
-from heat_transfer.functions.fluid_props import WaterProps
-from heat_transfer.functions.GasProps import GasProps
+from heat_transfer.functions.fluid_props import WaterProps, GasProps
 from heat_transfer.functions.htc_water import HTCFunctions
 
 @dataclass(frozen=True)

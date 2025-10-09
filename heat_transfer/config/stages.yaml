@@ -154,7 +154,7 @@ stages:
             fouling_conductivity: { value: 0.2, unit: W/m/K }
 
   HX_5:
-    geom:
+    geometry:
       inner_diameter: { value: 0.076, unit: m }
       inner_length: { value: 5.620, unit: m }
     layout:
