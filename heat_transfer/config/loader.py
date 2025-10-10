@@ -85,6 +85,8 @@ class ConfigLoader:
     @classmethod
     def _build_reversal_geometry(cls, node: Dict[str, Any]) -> ReversalGeometry:
         return ReversalGeometry(
+            inner_length=cls._qty(node["inner_length"]),
+            inner_diameter=cls._qty(node["inner_diameter"]),
             nozzles=cls._build_nozzles(node["nozzles"]),
             wall=cls._build_wall(node["wall"])
 

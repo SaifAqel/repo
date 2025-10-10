@@ -1,9 +1,11 @@
+# heat_transfer/functions/stage_solver.py
 from dataclasses import dataclass
-from math import pi
+from math import pi, log
 from scipy.integrate import solve_ivp
+from scipy.optimize import brentq
 from common.units import Q_, ureg
 from heat_transfer.config.models import GasStream, WaterStream, FirePass, SmokePass, Reversal
-from heat_transfer.functions.UA import UA
+from heat_transfer.functions.htc_water import HTCFunctions
 from iapws import IAPWS97
 
 @dataclass
@@ -12,34 +14,70 @@ class HeatStageSolver:
     gas: GasStream
     water: WaterStream
 
+    def _wall_flux(self, Tg: Q_, Tc: Q_) -> tuple[Q_, Q_, Q_]:
+        # Geometry and wall
+        ri = (self.stage.hot_side.inner_diameter/2).to("m")
+        ro = (self.stage.hot_side.outer_diameter/2).to("m")
+        kw = self.stage.hot_side.wall.conductivity.to("W/(m*K)")
+        L  = self.stage.hot_side.inner_length
+
+        # Hot-side convection (bulk based). Radiation depends on Twi.
+        h_g = self.gas.convective_coefficient.to("W/(m^2*K)")
+
+        Dh_shell = self.stage.cold_side.hydraulic_diameter
+        # Root function in Twi
+        def F(Twi_K: float) -> float:
+            Twi = Q_(Twi_K, "K")
+            h_r = self.gas.radiation_coefficient(Twi).to("W/(m^2*K)")
+            qprime_hot = 2*pi*ri * (h_g + h_r) * (Tg - Twi)  # W/m
+            # Conduction to outer wall
+            Two = Twi - qprime_hot*log(ro/ri)/(2*pi*kw)
+            # Cold-side HTC at Two
+            h_w = HTCFunctions.single_phase(self.water, Dh_shell, L, Two)
+            qprime_cold = 2*pi*ro * h_w * (Two - Tc)
+            return (qprime_hot - qprime_cold).to("W/m").magnitude
+
+        # Bracket: Tc < Twi < Tg
+        a = Tc.to("K").magnitude + 1e-6
+        b = Tg.to("K").magnitude - 1e-6
+        Twi_sol = Q_(brentq(F, a, b), "K")
+        # Recover flux and Two
+        h_r = self.gas.radiation_coefficient(Twi_sol).to("W/(m^2*K)")
+        qprime = 2*pi*ri * (h_g + h_r) * (Tg - Twi_sol)
+        Two = Twi_sol - qprime*log(ro/ri)/(2*pi*kw)
+        return qprime.to("W/m"), Twi_sol.to("K"), Two.to("K")
+
     def rhs(self, x, y):
         Tg, pg, hw = y
         TgQ, pgQ, hwQ = Q_(Tg, "K"), Q_(pg, "Pa"), Q_(hw, "J/kg")
 
-        # sync stream state for property-based model
+        # sync gas state
         self.gas.temperature = TgQ
         self.gas.pressure = pgQ
 
+        # water bulk temperature from (P, h)
         PwQ = self.water.pressure
         w = IAPWS97(P=PwQ.to("megapascal").magnitude, h=hwQ.to("kJ/kg").magnitude)
-        Tc_star = Q_(w.T, "K").to("K").magnitude
+        TcQ = Q_(w.T, "K")
 
-        rho_g = self.gas.density.to("kg/m^3").magnitude        # property, no call
-        cp_g  = self.gas.specific_heat.to("J/(kg*K)").magnitude # property, no call
-        fD    = self.gas.friction_factor                        # property
+        # local wall solve → heat flux per unit length
+        qprime, Twi, Two = self._wall_flux(TgQ, TcQ)
 
-        D = self.stage.hot_side.inner_diameter.to("m").magnitude
-        A = (pi * D**2 / 4)
-        P = (pi * D)
-        m_g = self.gas.mass_flow_rate.to("kg/s").magnitude
-        m_w = self.water.mass_flow_rate.to("kg/s").magnitude
-        v_g = m_g / (rho_g * A)
+        # balances
+        rho_g = self.gas.density.to("kg/m^3").magnitude
+        cp_g  = self.gas.specific_heat.to("J/(kg*K)").magnitude
+        D     = self.stage.hot_side.inner_diameter.to("m").magnitude
+        A     = (pi*D**2/4)
+        m_g   = self.gas.mass_flow_rate.to("kg/s").magnitude
+        P     = pi*D
+        v_g   = m_g/(rho_g*A)
+        fD    = self.gas.friction_factor
 
-        U = UA(stage=self.stage, gas=self.gas, water=self.water, T_wall=).UA
+        m_w   = self.water.mass_flow_rate.to("kg/s").magnitude
 
-        dTgdx = -(U * P / (m_g * cp_g)) * (Tg - Tc_star)
-        dpdx  = - fD * rho_g * v_g**2 / (2 * D)
-        dhwdx =  (U * P /  m_w)        * (Tg - Tc_star)
+        dTgdx = - qprime.to("W/m").magnitude / (m_g*cp_g)
+        dpdx  = - fD * rho_g * v_g**2 / (2*D)
+        dhwdx =   qprime.to("W/m").magnitude /  m_w
         return [dTgdx, dpdx, dhwdx]
 
     def solve(self):
@@ -49,4 +87,4 @@ class HeatStageSolver:
             self.gas.pressure.to("Pa").magnitude,
             self.water.enthalpy.to("J/kg").magnitude,
         ]
-        return solve_ivp(self.rhs, [0, L], y0)
+        return solve_ivp(self.rhs, [0, L], y0, dense_output=False)

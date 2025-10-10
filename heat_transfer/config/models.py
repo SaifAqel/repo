@@ -38,10 +38,13 @@ class TubeGeometry:
     inner_length: Q_
     wall: Wall
 
+    @property
+    def outer_diameter(self) -> Q_:
+        return self.inner_diameter + ( 2 * self.wall.thickness )
 
     @property
     def flow_area(self) -> Q_:
-        return ( pi * self.inner_diameter / 2 )**2
+        return pi * (self.inner_diameter / 2 )**2
     
     @property
     def rel_roughness(self) -> Q_:
@@ -58,9 +61,32 @@ class TubeGeometry:
 
 @dataclass(frozen=True)
 class ReversalGeometry:
+    inner_length: Q_
+    inner_diameter: Q_
     nozzles: Nozzles
     wall: Wall
 
+    @property
+    def outer_diameter(self) -> Q_:
+        return self.inner_diameter + ( 2 * self.wall.thickness)
+    
+    @property
+    def flow_area(self) -> Q_:
+        return pi * (self.inner_diameter / 2 )**2
+
+    @property
+    def rel_roughness(self) -> Q_:
+        return self.wall.surfaces.inner.roughness / self.inner_diameter
+    
+    @property
+    def HX_area(self) -> Q_:
+        p = pi * self.inner_diameter
+        return p * self.inner_length
+    
+    @property
+    def path_length(self) -> Q_:
+        return self.inner_diameter * 0.9
+    
 @dataclass(frozen=True)
 class BankGeometry:
     tube_inner_diameter: Q_
@@ -84,6 +110,10 @@ class ShellGeometry:
     flow_area: Q_
     wetted_perimeter: Q_
     wall: Wall
+
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return 4 * self.flow_area / self.wetted_perimeter
 
 
 
@@ -222,7 +252,7 @@ class WaterStream:
         pressure: Q_
         composition: Dict[str, Q_]
 
-        stage: object
+        stage: FirePass | SmokePass | Reversal
         water_props: WaterProps
 
         @property
@@ -269,9 +299,9 @@ class WaterStream:
             P = self.pressure
             T = self.temperature
             if self.phase == "liquid":
-                return self.water_props.rho_l(P, T)
+                return Q_(self.water_props.rho_l(P, T), "kg/m^3")
             if self.phase == "vapor":
-                return self.water_props.rho_v(P, T)
+                return Q_(self.water_props.rho_v(P, T), "kg/m^3")
             # saturated mixture: linear interpolation by quality using saturation properties
             rho_l = self.water_props.rho_l_sat(P)
             rho_v = self.water_props.rho_v_sat(P)
@@ -335,12 +365,8 @@ class WaterStream:
         
         @property
         def velocity(self) -> Q_:
-            return self.mass_flow_rate / self.stage.shell.flow_area
+            return self.mass_flow_rate / (self.stage.cold_side.flow_area * self.density)
         
         @property
         def reynlods_number(self) -> Q_:
-            return self.density * self.velocity * self.stage.hydraulic_diamtere / self.dynamic_viscosity
-
-        @property
-        def htc(self) -> Q_:
-            return HTCFunctions.htc_shell(self)
+            return self.density * self.velocity * self.stage.cold_side.hydraulic_diameter / self.dynamic_viscosity
