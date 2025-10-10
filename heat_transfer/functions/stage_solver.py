@@ -33,7 +33,8 @@ class HeatStageSolver:
             # Conduction to outer wall
             Two = Twi - qprime_hot*log(ro/ri)/(2*pi*kw)
             # Cold-side HTC at Two
-            h_w = HTCFunctions.single_phase(self.water, Dh_shell, L, Two)
+            qpp_hot = (qprime_hot / (2*pi*ro)).to("W/m^2")
+            h_w = HTCFunctions.shell(self.water, Dh_shell, L, Two, qpp_hot, x=0.0)
             qprime_cold = 2*pi*ro * h_w * (Two - Tc)
             return (qprime_hot - qprime_cold).to("W/m").magnitude
 

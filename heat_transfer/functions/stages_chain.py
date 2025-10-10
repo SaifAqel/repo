@@ -58,7 +58,7 @@ class MinCounterflowChain:
                 pressure=pgQ,
                 composition=self.gas_in.composition,
                 spectroscopic_data=self.gas_in.spectroscopic_data,
-                stage=None,
+                stage=stage,
                 gas_props=self.gas_in.gas_props,
             )
             w0 = WaterStream(
@@ -66,11 +66,11 @@ class MinCounterflowChain:
                 temperature=self.water_in.temperature,
                 pressure=PwQ,
                 composition=self.water_in.composition,
-                stage=None,
+                stage=stage,
                 water_props=self.water_in.water_props,
             )
 
-            sol = HeatStageSolver(geom=stage, gas=g0, water=w0).solve()
+            sol = HeatStageSolver(stage=stage, gas=g0, water=w0).solve()
 
             for i in range(sol.t.size):
                 x_i = x_offset + sol.t[i]
