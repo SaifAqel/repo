@@ -1,180 +1,188 @@
-# loader.py
 from __future__ import annotations
-
+from pathlib import Path
+from typing import Any, Dict, Optional
 import yaml
-from typing import Dict, Tuple, Any, Optional
 import cantera as ct
 from common.units import ureg, Q_
-from heat_transfer.config.models import (
-    Surface, Surfaces, Wall, Nozzle, Nozzles,
-    TubeGeometry, ReversalChamberGeometry, BankLayout,
-    ShellGeometry, Shell,
-    FirePass, SmokePass, Reversal, HotSide, ColdSide, Economiser, Stages,
-    WaterStream, GasStream,
-)
-from heat_transfer.functions.fluid_props import GasProps, WaterProps
+# import your dataclasses here (assumes they are in the same module or adjust import)
+from heat_transfer.config.models import (Wall, Surface, Surfaces, Nozzle, TubeGeometry, ReversalGeometry,
+                                         Nozzles, ShellGeometry, FirePass, SmokePass, Reversal, BankGeometry,
+                                         Economiser, Stages, GasStream, WaterStream, GasProps, WaterProps)
 
-# -----------------
-# quantity helpers
-# -----------------
+class ConfigLoader:
+    @staticmethod
+    def _qty(node: Dict[str, Any]) -> Q_:
+        if node is None:
+            raise ValueError("Expected {{ value, unit }} node, got None")
+        value = node.get("value")
+        unit = node.get("unit", "")
+        if unit is None or unit.strip() == "" or unit.strip() == "-":
+            return Q_(value)
+        return Q_(value, ureg(unit))
+    
 
-def _q(node: Optional[Dict]) -> Optional[Q_]:
-    if not node:
-        return None
-    v = node.get("value", None)
-    u = node.get("unit", "")
-    if v is None:
-        return None
-    return Q_(v, u)
+    @classmethod
+    def _build_surface(cls, node: Dict[str, Any]) -> Surface:
+        return Surface(
+            roughness=cls._qty(node["roughness"]),
+            emissivity=cls._qty(node["emissivity"]),
+            fouling_thickness=cls._qty(node["fouling_thickness"]),
+            fouling_conductivity=cls._qty(node["fouling_conductivity"]),
+        )
 
-def _qd(mapping: Optional[Dict[str, Dict]]) -> Dict[str, Q_]:
-    return {k: _q(v) for k, v in (mapping or {}).items()}
+    @classmethod
+    def _build_surfaces(cls, node: Dict[str, Any]) -> Surfaces:
+        return Surfaces(
+            inner=cls._build_surface(node["inner"]),
+            outer=cls._build_surface(node["outer"]),
+        )
 
-# -----------------
-# streams
-# -----------------
+    @classmethod
+    def _build_wall(cls, node: Dict[str, Any]) -> Wall:
+        props = node.get("properties", node)  # handle either wall: properties: ... or wall: { ... }
+        return Wall(
+            thickness=cls._qty(props["thickness"]),
+            conductivity=cls._qty(props["conductivity"]),
+            surfaces=cls._build_surfaces(node["surfaces"])
+        )
 
-def load_streams_from_yaml(yaml_path: str) -> Tuple[GasStream, WaterStream]:
-    with open(yaml_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
+    @classmethod
+    def _build_nozzle(cls, node: Dict[str, Any]) -> Nozzle:
+        return Nozzle(
+            k=cls._qty(node["k"])
+        )
+    
+    @classmethod
+    def _build_nozzles(cls, node: Dict[str, Any]) -> Nozzles:
+        return Nozzles(
+            inlet=cls._build_nozzle(node["inlet"]),
+            outlet=cls._build_nozzle(node["outlet"]),
+        )
 
-    g = data["gas_stream"]
-    gas = GasStream(
-        mass_flow_rate=_q(g.get("mass_flow_rate")),
-        temperature=_q(g.get("temperature")),
-        pressure=_q(g.get("pressure")),
-        composition=_qd(g.get("composition")),
-        spectroscopic_data=_qd(g.get("spectroscopic_data")),
-        stage=None,
-        gas_props = GasProps(ct.Solution("heat_transfer/config/flue_cantera.yaml"))
 
-    )
 
-    w = data["water_stream"]
-    water = WaterStream(
-        mass_flow_rate=_q(w.get("mass_flow_rate")),
-        temperature=_q(w.get("temperature")),
-        pressure=_q(w.get("pressure")),
-        composition=_qd(w.get("composition")),
-        stage=None,            # you can attach later
-        water_props=WaterProps,      
-    )
+    @classmethod
+    def _build_tube_geometry(cls, node: Dict[str, Any]) -> TubeGeometry:
+        # number_of_tubes may be missing for drum-like objects; expect it's present for passes
+        return TubeGeometry(
+            inner_diameter=cls._qty(node["inner_diameter"]),
+            inner_length=cls._qty(node["inner_length"]),
+            wall=cls._build_wall(node["wall"])
+        )
 
-    return gas, water
+    @classmethod
+    def _build_bank_geometry(cls, node: Dict[str, Any]) -> BankGeometry:
+        return BankGeometry(
+            tube_inner_diameter=cls._qty(node["tube_inner_diameter"]),
+            tube_inner_length=cls._qty(node["tube_inner_length"]),
+            tubes_number=cls._qty(node["tubes_number"]),
+            layout=node["layout"],
+            pitch=cls._qty(node["pitch"]),
+            wall=cls._build_wall(node["wall"])
 
-# -----------------
-# stage pieces
-# -----------------
+        )
 
-def _surface(n: Dict[str, Any]) -> Surface:
-    return Surface(
-        roughness=_q(n.get("roughness")),
-        emissivity=_q(n.get("emissivity")),
-        fouling_thickness=_q(n.get("fouling_thickness")),
-        fouling_conductivity=_q(n.get("fouling_conductivity")),
-    )
+    @classmethod
+    def _build_reversal_geometry(cls, node: Dict[str, Any]) -> ReversalGeometry:
+        return ReversalGeometry(
+            nozzles=cls._build_nozzles(node["nozzles"]),
+            wall=cls._build_wall(node["wall"])
 
-def _wall(n: Dict[str, Any]) -> Wall:
-    s = n.get("surfaces") or {}
-    inner = _surface(s.get("inner", {}))
-    outer = _surface(s.get("outer", {}))
-    return Wall(
-        thickness=_q(n.get("thickness")),
-        conductivity=_q(n.get("conductivity")),
-        surfaces=Surfaces(inner=inner, outer=outer),
-    )
+        )
 
-def _shell(n: Dict[str, Any]) -> Shell:
-    g = n.get("wall", {})
-    geom = n.get("geometry") or {}
-    geometry = ShellGeometry(
-        flow_area=_q(geom.get("flow_area")),
-        wetted_perimeter=_q(geom.get("wetted_perimeter")),
-    )
-    return Shell(geometry=geometry, wall=_wall(g))
+    @classmethod
+    def _build_shell_geometry(cls, node: Dict[str, Any]) -> ShellGeometry:
+        return ShellGeometry(
+            flow_area=cls._qty(node["flow_area"]),
+            wetted_perimeter=cls._qty(node["wetted_perimeter"]),
+            wall=cls._build_wall(node["wall"])
+        )
 
-def _tube_geom(n: Dict[str, Any]) -> TubeGeometry:
-    return TubeGeometry(
-        inner_diameter=_q(n.get("inner_diameter")),
-        inner_length=_q(n.get("inner_length")),
-    )
+    @classmethod
+    def _build_fire_pass(cls, node: Dict[str, Any]) -> FirePass:
+        return FirePass(
+            hot_side=cls._build_tube_geometry(node["hot_side"]),
+            cold_side=cls._build_shell_geometry(node["cold_side"]),
+        )
+    
+    @classmethod
+    def _build_smoke_pass(cls, node: Dict[str, Any]) -> SmokePass:
+        return SmokePass(
+            hot_side=cls._build_bank_geometry(node["hot_side"]),
+            cold_side=cls._build_shell_geometry(node["cold_side"])
+        )
 
-def _bank_layout(n: Dict[str, Any]) -> BankLayout:
-    return BankLayout(
-        tubes_number=_q(n.get("tubes_number")),
-        shape=(n.get("shape") or ""),
-        pitch=_q(n.get("pitch")),
-    )
+    @classmethod
+    def _build_reversal(cls, node: Dict[str, Any]) -> Reversal:
+        return Reversal(
+            hot_side=cls._build_reversal_geometry(node["hot_side"]),
+            cold_side=cls._build_shell_geometry(node["cold_side"])
+        )
+    
+    @classmethod
+    def _build_economiser(cls, node: Dict[str, Any]) -> Economiser:
+        return Economiser(
+            hot_side=cls._qty(node["hot_side"]),
+            cold_side=cls._qty(node["cold_side"])
+        )
 
-def _nozzles(n: Dict[str, Any]) -> Nozzles:
-    # YAML provides inner/outer objects but no fields yet
-    return Nozzles(inner=Nozzle(), outer=Nozzle())
+    @classmethod
+    def _build_stages(cls, node: Dict[str, Any]) -> Stages:
+        return Stages(
+            HX_1=cls._build_fire_pass(node["HX_1"]),
+            HX_2=cls._build_reversal(node["HX_2"]),
+            HX_3=cls._build_smoke_pass(node["HX_3"]),
+            HX_4=cls._build_reversal(node["HX_4"]),
+            HX_5=cls._build_smoke_pass(node["HX_5"]),
+            HX_6=cls._build_economiser(node["HX_6"])
+        )
 
-# -----------------
-# stages
-# -----------------
+    @classmethod
+    def _build_gas_stream(cls, node: Dict[str, Any]) -> GasStream:
+        composition = {k: cls._qty(v) for k, v in node.get("composition", {}).items()}
+        spectro = {k: cls._qty(v) for k, v in node.get("spectroscopic_data", {}).items()}
+        return GasStream(
+            mass_flow_rate=cls._qty(node["mass_flow_rate"]),
+            temperature=cls._qty(node["temperature"]),
+            pressure=cls._qty(node["pressure"]),
+            composition=composition,
+            spectroscopic_data=spectro,
+            stage= None,
+            gas_props=GasProps(ct.Solution("heat_transfer/config/flue_cantera.yaml"))
+        )
 
-def load_stages_from_yaml(yaml_path: str) -> Stages:
-    with open(yaml_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-    stages = data.get("stages") or {}
+    @classmethod
+    def _build_water(cls, node: Dict[str, Any]) -> WaterStream:
+        composition = {k: cls._qty(v) for k, v in node.get("composition", {}).items()}
+        return WaterStream(
+            mass_flow_rate=cls._qty(node["mass_flow_rate"]),
+            temperature=cls._qty(node["temperature"]),
+            pressure=cls._qty(node["pressure"]),
+            composition=composition,
+            stage=None,
+            water_props=WaterProps
+        )
 
-    # HX_1 -> FirePass (single tube pass)
-    hx1 = stages.get("HX_1", {}) or {}
-    firepass = FirePass(
-        geometry=_tube_geom(hx1.get("geometry", {}) or {}),
-        wall=_wall(hx1.get("wall", {}) or {}),
-        shell=_shell(hx1.get("shell", {}) or {}),
-    )
+    @classmethod
+    def load_stages(cls, path: str | Path) -> Stages:
+        path = Path(path)
+        with path.open("r", encoding="utf-8") as fh:
+            doc = yaml.safe_load(fh)
+        return cls._build_stages(doc["stages"])
 
-    # HX_2 -> Reversal
-    hx2 = stages.get("HX_2", {}) or {}
-    reversal2 = Reversal(
-        geometry=ReversalChamberGeometry(),                        # no params in YAML
-        nozzles=_nozzles(hx2.get("nozzles", {}) or {}),
-        wall=_wall(hx2.get("wall", {}) or {}),
-        shell=_shell(hx2.get("shell", {}) or {}),
-    )
+    
+    @classmethod
+    def load_gas_stream(cls, path: str | Path) -> GasStream:
+        path = Path(path)
+        with path.open("r", encoding="utf-8") as fh:
+            doc = yaml.safe_load(fh)
+        return cls._build_gas_stream(doc["gas_stream"])
 
-    # HX_3 -> SmokePass (tube bank)
-    hx3 = stages.get("HX_3", {}) or {}
-    smokepass3 = SmokePass(
-        geometry=_tube_geom(hx3.get("geometry", {}) or {}),
-        layout=_bank_layout(hx3.get("layout", {}) or {}),
-        wall=_wall(hx3.get("wall", {}) or {}),
-        shell=_shell(hx3.get("shell", {}) or {}),
-    )
+    
+    @classmethod
+    def load_water_stream(cls, path: str | Path) -> WaterStream:
+        path = Path(path)
+        with path.open("r", encoding="utf-8") as fh:
+            doc = yaml.safe_load(fh)
+        return cls._build_water(doc["water_stream"])
 
-    # HX_4 -> Reversal
-    hx4 = stages.get("HX_4", {}) or {}
-    reversal4 = Reversal(
-        geometry=ReversalChamberGeometry(),
-        nozzles=_nozzles(hx4.get("nozzles", {}) or {}),
-        wall=_wall(hx4.get("wall", {}) or {}),
-        shell=_shell(hx4.get("shell", {}) or {}),
-    )
-
-    # HX_5 -> SmokePass (tube bank)
-    hx5 = stages.get("HX_5", {}) or {}
-    smokepass5 = SmokePass(
-        geometry=_tube_geom(hx5.get("geometry", {}) or {}),
-        layout=_bank_layout(hx5.get("layout", {}) or {}),
-        wall=_wall(hx5.get("wall", {}) or {}),
-        shell=_shell(hx5.get("shell", {}) or {}),
-    )
-
-    # HX_6 -> Economiser
-    hx6 = stages.get("HX_6", {}) or {}
-    economiser = Economiser(
-        hot_side=HotSide(area=_q((hx6.get("hot_side") or {}).get("area"))),
-        cold_side=ColdSide(area=_q((hx6.get("cold_side") or {}).get("area"))),
-    )
-
-    return Stages(
-        HX_1=firepass,
-        HX_2=reversal2,
-        HX_3=smokepass3,
-        HX_4=reversal4,
-        HX_5=smokepass5,
-        HX_6=economiser,
-    )

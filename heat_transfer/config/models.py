@@ -26,42 +26,63 @@ class Wall:
 
 @dataclass(frozen=True)
 class Nozzle:
-    pass
+    k: Q_
 @dataclass(frozen=True)
 class Nozzles:
-    inner: Nozzle
-    outer: Nozzle
+    inlet: Nozzle
+    outlet: Nozzle
 
 @dataclass(frozen=True)
 class TubeGeometry:
     inner_diameter: Q_
     inner_length: Q_
+    wall: Wall
+
 
     @property
     def flow_area(self) -> Q_:
         return ( pi * self.inner_diameter / 2 )**2
+    
+    @property
+    def rel_roughness(self) -> Q_:
+        return self.wall.surfaces.inner.roughness / self.inner_diameter
+    
+    @property
+    def HX_area(self) -> Q_:
+        p = pi * self.inner_diameter
+        return p * self.inner_length
+    
+    @property
+    def path_length(self) -> Q_:
+        return self.inner_diameter * 0.9
 
 @dataclass(frozen=True)
 class ReversalGeometry:
     nozzles: Nozzles
-    pass
+    wall: Wall
 
 @dataclass(frozen=True)
 class BankGeometry:
     tube_inner_diameter: Q_
     tube_inner_length: Q_
     tubes_number: Q_
-    shape: str
+    layout: str
     pitch: Q_
+    wall: Wall
+
+    @property
+    def flow_area(self) -> Q_:
+        return self.tubes_number * pi * (self.tube_inner_diameter / 2 )**2
+    
+    @property
+    def rel_roughness(self) -> Q_:
+        return self.wall.surfaces.inner.roughness / self.tube_inner_diameter
+
 
 @dataclass(frozen=True)
 class ShellGeometry:
     flow_area: Q_
     wetted_perimeter: Q_
-
-@dataclass(frozen=True)
-class Shell:
-    geometry: ShellGeometry
     wall: Wall
 
 
@@ -69,33 +90,22 @@ class Shell:
 @dataclass(frozen=True)
 class FirePass:
     hot_side: TubeGeometry
-    wall: Wall
-    cold_side: Shell
+    cold_side: ShellGeometry
 
 @dataclass(frozen=True)
 class SmokePass:
     hot_side: BankGeometry
-    wall: Wall
-    cold_side: Shell
+    cold_side: ShellGeometry
 
 @dataclass(frozen=True)
 class Reversal:
     hot_side: ReversalGeometry
-    wall: Wall
-    cold_side: Shell
-
-@dataclass(frozen=True)
-class HotSide:
-    area: Q_
-    
-@dataclass(frozen=True)
-class ColdSide:
-    area: Q_
+    cold_side: ShellGeometry
 
 @dataclass(frozen=True)
 class Economiser:
-    hot_side: HotSide
-    cold_side: ColdSide
+    hot_side: Q_
+    cold_side: Q_
 
 
 @dataclass(frozen=True)
@@ -121,7 +131,7 @@ class GasStream:
         composition: Dict[str, Q_]
         spectroscopic_data: Dict[str, Q_]
 
-        stage: object
+        stage: FirePass | SmokePass | Reversal
         gas_props: GasProps
 
         @property
@@ -146,11 +156,11 @@ class GasStream:
 
         @property
         def velocity(self) -> Q_:
-            return self.mass_flow_rate / (self.density * self.stage.tube_inner_flow_area)
+            return self.mass_flow_rate / (self.density * self.stage.hot_side.flow_area)
 
         @property
         def reynolds_number(self) -> Q_:
-            return (self.density * self.velocity * self.stage.geometry.inner_diameter) / self.dynamic_viscosity
+            return (self.density * self.velocity * self.stage.hot_side.inner_diameter) / self.dynamic_viscosity
         
         @property
         def prandt_number(self) -> Q_:
@@ -166,7 +176,7 @@ class GasStream:
         
         @property
         def convective_coefficient(self) -> Q_:
-            return self.nusselt_number * self.thermal_conductivity / self.stage.geometry.inner_diameter
+            return self.nusselt_number * self.thermal_conductivity / self.stage.hot_side.inner_diameter
         
         @property
         def absorption_coefficient (self) -> Q_:
@@ -174,7 +184,7 @@ class GasStream:
 
         @property
         def emmissivity(self) -> Q_:
-            return 1.0 - exp(-self.absorption_coefficient * self.stage.path_length)
+            return 1.0 - exp(-self.absorption_coefficient * self.stage.hot_side.path_length)
             
         def radiation_coefficient(self, T_wall) -> Q_:
             sigma = 5.670374419e-8 * ureg.watt / (ureg.meter**2 * ureg.kelvin**4)
@@ -185,7 +195,7 @@ class GasStream:
         def friction_factor(self) -> float:
             f = 0.02 
             Re = self.reynolds_number.magnitude
-            rel_rough = self.stage.rel_roughness
+            rel_rough = self.stage.hot_side.rel_roughness
             tol = 1e-6
             max_iter = 50
 

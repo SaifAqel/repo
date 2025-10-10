@@ -1,17 +1,18 @@
 from math import log
 from common.units import ureg, Q_
-from heat_transfer.config.models import GasStream, WaterStream
+from heat_transfer.config.models import GasStream, WaterStream, FirePass, SmokePass, Reversal
 from dataclasses import dataclass
 
 @dataclass
 class UA:
-    stage = object
-    gas = GasStream
-    water = WaterStream
+    stage: FirePass | SmokePass | Reversal
+    gas: GasStream
+    water: WaterStream
+    T_wall: Q_
     
     @property
     def R_gas(self) -> Q_:
-        h = self.gas.convective_coefficient + self.gas.radiation_coefficient
+        h = self.gas.convective_coefficient + self.gas.radiation_coefficient(T_wall=T_wall)
         return 1/h
     
     @property
@@ -37,11 +38,11 @@ class UA:
     @property
     def R_total(self) -> Q_:
         return (
-                self.R_gas(self)
-                + self.R_foul_gas(self)
-                + self.R_wall(self)
-                + self.R_foul_water(self)
-                + self.R_water(self)
+                self.R_gas
+                + self.R_foul_gas
+                + self.R_wall
+                + self.R_foul_water
+                + self.R_water
         )
 
     @property
@@ -50,5 +51,5 @@ class UA:
 
     @property
     def UA(self) -> Q_:
-        A = self.stage.geom.HX_area
-        return self.U_overall(self) * A
+        A = self.stage.hot_side.HX_area
+        return self.U_overall * A

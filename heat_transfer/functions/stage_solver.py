@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from math import pi
 from scipy.integrate import solve_ivp
 from common.units import Q_, ureg
-from heat_transfer.config.models import GasStream, WaterStream
+from heat_transfer.config.models import GasStream, WaterStream, FirePass, SmokePass, Reversal
 from heat_transfer.functions.UA import UA
 from iapws import IAPWS97
 
 @dataclass
 class HeatStageSolver:
-    geom: object
+    stage: FirePass | SmokePass | Reversal
     gas: GasStream
     water: WaterStream
 
@@ -28,14 +28,14 @@ class HeatStageSolver:
         cp_g  = self.gas.specific_heat.to("J/(kg*K)").magnitude # property, no call
         fD    = self.gas.friction_factor                        # property
 
-        D = self.geom.geometry.inner_diameter.to("m").magnitude
+        D = self.stage.hot_side.inner_diameter.to("m").magnitude
         A = (pi * D**2 / 4)
         P = (pi * D)
         m_g = self.gas.mass_flow_rate.to("kg/s").magnitude
         m_w = self.water.mass_flow_rate.to("kg/s").magnitude
         v_g = m_g / (rho_g * A)
 
-        U = UA(self).UA
+        U = UA(stage=self.stage, gas=self.gas, water=self.water, T_wall=).UA
 
         dTgdx = -(U * P / (m_g * cp_g)) * (Tg - Tc_star)
         dpdx  = - fD * rho_g * v_g**2 / (2 * D)
@@ -43,7 +43,7 @@ class HeatStageSolver:
         return [dTgdx, dpdx, dhwdx]
 
     def solve(self):
-        L = self.geom.geometry.inner_length.to("m").magnitude
+        L = self.stage.hot_side.inner_length.to("m").magnitude
         y0 = [
             self.gas.temperature.to("K").magnitude,
             self.gas.pressure.to("Pa").magnitude,
