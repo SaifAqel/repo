@@ -18,8 +18,8 @@ stages:
             fouling_thickness: { value: 0.0001, unit: m }
             fouling_conductivity: { value: 0.2, unit: W/m/K }
     cold_side:
-      flow_area: { value: 1, unit: m^2 }
-      wetted_perimeter: { value: 1, unit: m }
+      flow_area: { value: 0.0012, unit: m^2 }
+      wetted_perimeter: { value: 0.48, unit: m }
       wall:
         thickness: { value: 0.01, unit: m }
         conductivity: { value: 45, unit: W/m/K }
@@ -59,8 +59,8 @@ stages:
             fouling_thickness: { value: 0.0001, unit: m }
             fouling_conductivity: { value: 0.2, unit: W/m/K }
     cold_side:
-      flow_area: { value: 1, unit: m^2 }
-      wetted_perimeter: { value: 1, unit: m }
+      flow_area: { value: 0.0008, unit: m^2 }
+      wetted_perimeter: { value: 0.32, unit: m }
       wall:
         thickness: { value: 0.01, unit: m }
         conductivity: { value: 45, unit: W/m/K }
@@ -98,8 +98,8 @@ stages:
             fouling_thickness: { value: 0.0001, unit: m }
             fouling_conductivity: { value: 0.20, unit: W/m/K }
     cold_side:
-      flow_area: { value: 1, unit: m^2 }
-      wetted_perimeter: { value: 1, unit: m }
+      flow_area: { value: 0.001, unit: m^2 }
+      wetted_perimeter: { value: 0.4, unit: m }
       wall:
         thickness: { value: 0.01, unit: m }
         conductivity: { value: 45, unit: W/m/K }
@@ -139,8 +139,8 @@ stages:
             fouling_thickness: { value: 0.0001, unit: m }
             fouling_conductivity: { value: 0.2, unit: W/m/K }
     cold_side:
-      flow_area: { value: 1, unit: m^2 }
-      wetted_perimeter: { value: 1, unit: m }
+      flow_area: { value: 0.0008, unit: m^2 }
+      wetted_perimeter: { value: 0.32, unit: m }
       wall:
         thickness: { value: 0.01, unit: m }
         conductivity: { value: 45, unit: W/m/K }
@@ -178,8 +178,8 @@ stages:
             fouling_thickness: { value: 0.0001, unit: m }
             fouling_conductivity: { value: 0.20, unit: W/m/K }
     cold_side:
-      flow_area: { value: 1, unit: m^2 }
-      wetted_perimeter: { value: 1, unit: m }
+      flow_area: { value: 0.001, unit: m^2 }
+      wetted_perimeter: { value: 0.4, unit: m }
       wall:
         thickness: { value: 0.01, unit: m }
         conductivity: { value: 45, unit: W/m/K }
