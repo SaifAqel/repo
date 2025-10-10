@@ -35,10 +35,17 @@ class HTCFunctions:
         v   = water.velocity.to("m/s").magnitude
         Dh  = D_h.to("m").magnitude
         Lm  = L.to("m").magnitude
-
-        Tsat = water.saturation_temperature
-        mu_w = (water.water_props.mu_l(water.pressure, T_wall) if T_wall < Tsat
-                else water.water_props.mu_v(water.pressure, T_wall)).to("Pa*s").magnitude
+        
+        # Guard: avoid property calls at nonphysical wall temperatures during bracketing.
+        # If T_wall is outside IF97 range, use bulk viscosity for μ_w.
+        T_wK = T_wall.to("K").magnitude
+        if 273.16 <= T_wK <= 1073.15:
+            Tsat = water.saturation_temperature
+            mu_w_Q = (water.water_props.mu_l(water.pressure, T_wall)
+                      if T_wall <= Tsat else water.water_props.mu_v(water.pressure, T_wall))
+            mu_w = mu_w_Q.to("Pa*s").magnitude
+        else:
+            mu_w = mu  # fallback only affects the (μ/μw)^0.14 correction in Sieder–Tate
 
         Re = rho * v * Dh / mu
         Pr = mu * cp / k
@@ -69,9 +76,15 @@ class HTCFunctions:
         Re = rho_l * v * Dh / mu_l
         Pr = mu_l * cp_l / k_l
 
-        Tsat = water.saturation_temperature
-        mu_w = (water.water_props.mu_l(P, T_wall) if T_wall < Tsat
-                else water.water_props.mu_v(P, T_wall)).to("Pa*s").magnitude
+        # Only use wall μ if T_wall is within IF97 range. Otherwise use bulk μ.
+        T_wK = T_wall.to("K").magnitude
+        if 273.16 <= T_wK <= 1073.15:
+            Tsat = water.saturation_temperature
+            mu_w_Q = (water.water_props.mu_l(P, T_wall)
+                      if T_wall <= Tsat else water.water_props.mu_v(P, T_wall))
+            mu_w = mu_w_Q.to("Pa*s").magnitude
+        else:
+            mu_w = mu_l
 
         if Re < 2300.0:
             h_lo = Correlations.sieder_tate(Re, Pr, Dh, Lm, mu_l, mu_w, k_l)

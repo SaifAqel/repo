@@ -7,6 +7,7 @@ from common.units import Q_, ureg
 from heat_transfer.config.models import GasStream, WaterStream, FirePass, SmokePass, Reversal
 from heat_transfer.functions.htc_water import HTCFunctions
 from iapws import IAPWS97
+import numpy as np
 
 @dataclass
 class HeatStageSolver:
@@ -39,8 +40,23 @@ class HeatStageSolver:
             return (qprime_hot - qprime_cold).to("W/m").magnitude
 
         # Bracket: Tc < Twi < Tg
+
+        # Bracket: Tc < Twi < Tg
         a = Tc.to("K").magnitude + 1e-6
         b = Tg.to("K").magnitude - 1e-6
+        Fa = F(a); Fb = F(b)
+        if Fa*Fb > 0.0:
+            # Coarse scan to recover a valid bracket without moving near Tg
+            xs = np.linspace(a, b, 33)
+            Fs = [F(x) for x in xs]
+            brkt = None
+            for i in range(len(xs)-1):
+                if Fs[i]*Fs[i+1] <= 0.0:
+                    brkt = (xs[i], xs[i+1]); break
+            if brkt is None:
+                raise ValueError(f"No sign change in F(Twi) on [{a:.3f},{b:.3f}]. "
+                                 f"F(a)={Fa:.3e}, F(b)={Fb:.3e}")
+            a, b = brkt
         Twi_sol = Q_(brentq(F, a, b), "K")
         # Recover flux and Two
         h_r = self.gas.radiation_coefficient(Twi_sol).to("W/(m^2*K)")
