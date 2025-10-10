@@ -89,8 +89,8 @@ class ReversalGeometry:
     
 @dataclass(frozen=True)
 class BankGeometry:
-    tube_inner_diameter: Q_
-    tube_inner_length: Q_
+    inner_diameter: Q_
+    inner_length: Q_
     tubes_number: Q_
     layout: str
     pitch: Q_
@@ -98,11 +98,11 @@ class BankGeometry:
 
     @property
     def flow_area(self) -> Q_:
-        return self.tubes_number * pi * (self.tube_inner_diameter / 2 )**2
+        return self.tubes_number * pi * (self.inner_diameter / 2 )**2
     
     @property
     def rel_roughness(self) -> Q_:
-        return self.wall.surfaces.inner.roughness / self.tube_inner_diameter
+        return self.wall.surfaces.inner.roughness / self.inner_diameter
 
 
 @dataclass(frozen=True)
@@ -182,7 +182,7 @@ class GasStream:
         
         @property
         def mass_flux(self) -> Q_:
-            return self.mass_flow_rate / self.stage.tube_inner_flow_area
+            return self.mass_flow_rate / self.stage.flow_area
 
         @property
         def velocity(self) -> Q_:
@@ -265,23 +265,27 @@ class WaterStream:
             if self.temperature < Tsat: return "liquid"
             if self.temperature > Tsat: return "vapor"
             return "saturated"
-
+        
         @property
         def quality(self) -> Q_:
             P = self.pressure
-            if self.phase != "saturated":
-                return Q_(0.0 if self.phase == "liquid" else 1.0, "dimensionless")
+            ph = self.phase
+            if ph != "saturated":
+                return Q_(0.0 if ph == "liquid" else 1.0, "dimensionless")
 
             h_l = self.water_props.h_l_sat(P)
             h_v = self.water_props.h_v_sat(P)
-            # avoid division by zero
-            x = 0.0
-            if (h_v - h_l).magnitude != 0:
-                x = 0.0
-            return Q_(x, "dimensionless")
+
+            # mixture enthalpy provided by the solver
+            h = getattr(self, "_h", None)
+            if h is None:
+                # fallback: use current enthalpy (may be slightly off but keeps it minimal)
+                h = self.enthalpy
+
+            return (h - h_l) / (h_v - h_l)
 
         @property
-        def enthalpy(self) -> Q_:
+        def _h(self) -> Q_:
             P = self.pressure
             T = self.temperature
             if self.phase == "liquid":

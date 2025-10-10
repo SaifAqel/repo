@@ -8,32 +8,32 @@ from iapws import IAPWS97
 @dataclass
 class MinCounterflowChain:
     stages: Stages
-    gas_in: GasStream
-    water_in: WaterStream
+    gas: GasStream
+    water: WaterStream
 
     def _terminal_hw(self, hw0: Q_) -> Q_:
-        TgQ = self.gas_in.temperature.to("K")
-        pgQ = self.gas_in.pressure.to("Pa")
+        TgQ = self.gas.temperature.to("K")
+        pgQ = self.gas.pressure.to("Pa")
         hwQ = hw0.to("J/kg")
-        PwQ = self.water_in.pressure
+        PwQ = self.water.pressure
 
         for stage in self.stages:
             g = GasStream(
-                mass_flow_rate=self.gas_in.mass_flow_rate,
+                mass_flow_rate=self.gas.mass_flow_rate,
                 temperature=TgQ,
                 pressure=pgQ,
-                composition=self.gas_in.composition,
-                spectroscopic_data=self.gas_in.spectroscopic_data,
+                composition=self.gas.composition,
+                spectroscopic_data=self.gas.spectroscopic_data,
                 stage=stage,
-                gas_props=self.gas_in.gas_props,
+                gas_props=self.gas.gas_props,
             )
             w = WaterStream(
-                mass_flow_rate=self.water_in.mass_flow_rate,
-                temperature=self.water_in.temperature,
+                mass_flow_rate=self.water.mass_flow_rate,
+                temperature=self.water.temperature,
                 pressure=PwQ,
-                composition=self.water_in.composition,
+                composition=self.water.composition,
                 stage=stage,
-                water_props=self.water_in.water_props,
+                water_props=self.water.water_props,
             )
             sol = HeatStageSolver(stage=stage, gas=g, water=w).solve()
             TgQ = Q_(sol.y[0, -1], "K")
@@ -43,31 +43,31 @@ class MinCounterflowChain:
         return hwQ
 
     def _simulate_profile(self, hw0: Q_):
-        TgQ = self.gas_in.temperature.to("K")
-        pgQ = self.gas_in.pressure.to("Pa")
+        TgQ = self.gas.temperature.to("K")
+        pgQ = self.gas.pressure.to("Pa")
         hwQ = hw0.to("J/kg")
-        PwQ = self.water_in.pressure
+        PwQ = self.water.pressure
 
         profile = []
         x_offset = 0.0
 
         for stage in self.stages:
             g0 = GasStream(
-                mass_flow_rate=self.gas_in.mass_flow_rate,
+                mass_flow_rate=self.gas.mass_flow_rate,
                 temperature=TgQ,
                 pressure=pgQ,
-                composition=self.gas_in.composition,
-                spectroscopic_data=self.gas_in.spectroscopic_data,
+                composition=self.gas.composition,
+                spectroscopic_data=self.gas.spectroscopic_data,
                 stage=stage,
-                gas_props=self.gas_in.gas_props,
+                gas_props=self.gas.gas_props,
             )
             w0 = WaterStream(
-                mass_flow_rate=self.water_in.mass_flow_rate,
-                temperature=self.water_in.temperature,
+                mass_flow_rate=self.water.mass_flow_rate,
+                temperature=self.water.temperature,
                 pressure=PwQ,
-                composition=self.water_in.composition,
+                composition=self.water.composition,
                 stage=stage,
-                water_props=self.water_in.water_props,
+                water_props=self.water.water_props,
             )
 
             sol = HeatStageSolver(stage=stage, gas=g0, water=w0).solve()
@@ -82,21 +82,21 @@ class MinCounterflowChain:
                 Tw_i = Q_(w_state.T, "K")
 
                 g_i = GasStream(
-                    mass_flow_rate=self.gas_in.mass_flow_rate,
+                    mass_flow_rate=self.gas.mass_flow_rate,
                     temperature=Tg_i,
                     pressure=pg_i,
-                    composition=self.gas_in.composition,
-                    spectroscopic_data=self.gas_in.spectroscopic_data,
-                    stage=None,
-                    gas_props=self.gas_in.gas_props,
+                    composition=self.gas.composition,
+                    spectroscopic_data=self.gas.spectroscopic_data,
+                    stage=stage,
+                    gas_props=self.gas.gas_props,
                 )
                 w_i = WaterStream(
-                    mass_flow_rate=self.water_in.mass_flow_rate,
+                    mass_flow_rate=self.water.mass_flow_rate,
                     temperature=Tw_i,
                     pressure=PwQ,
-                    composition=self.water_in.composition,
-                    stage=None,
-                    water_props=self.water_in.water_props,
+                    composition=self.water.composition,
+                    stage=stage,
+                    water_props=self.water.water_props,
                 )
                 profile.append((Q_(x_i, "m"), g_i, w_i))
 
@@ -108,7 +108,7 @@ class MinCounterflowChain:
         return profile
 
     def run(self, tol: Q_ = Q_(50.0, "J/kg"), max_iter: int = 10):
-        hw_L_inlet = self.water_in.enthalpy.to("J/kg")
+        hw_L_inlet = self.water._h.to("J/kg")
 
         h0a = hw_L_inlet.to("J/kg")
         h0b = Q_(h0a.magnitude * 0.99, "J/kg")

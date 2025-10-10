@@ -66,11 +66,14 @@ class HeatStageSolver:
 
     def rhs(self, x, y):
         Tg, pg, hw = y
-        TgQ, pgQ, hwQ = Q_(Tg, "K"), Q_(pg, "Pa"), Q_(hw, "J/kg")
-
+        TgQ = Q_(Tg, "K")
+        pgQ = Q_(pg, "Pa")
+        hwQ = Q_(Tg, "K")
+     
         # sync gas state
         self.gas.temperature = TgQ
         self.gas.pressure = pgQ
+        self.water.enthalpy = hwQ
 
         # water bulk temperature from (P, h)
         PwQ = self.water.pressure
@@ -102,6 +105,6 @@ class HeatStageSolver:
         y0 = [
             self.gas.temperature.to("K").magnitude,
             self.gas.pressure.to("Pa").magnitude,
-            self.water.enthalpy.to("J/kg").magnitude,
+            self.water._h.to("J/kg").magnitude,
         ]
         return solve_ivp(self.rhs, [0, L], y0, dense_output=False)

@@ -73,8 +73,8 @@ class ConfigLoader:
     @classmethod
     def _build_bank_geometry(cls, node: Dict[str, Any]) -> BankGeometry:
         return BankGeometry(
-            tube_inner_diameter=cls._qty(node["tube_inner_diameter"]),
-            tube_inner_length=cls._qty(node["tube_inner_length"]),
+            inner_diameter=cls._qty(node["inner_diameter"]),
+            inner_length=cls._qty(node["inner_length"]),
             tubes_number=cls._qty(node["tubes_number"]),
             layout=node["layout"],
             pitch=cls._qty(node["pitch"]),

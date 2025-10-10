@@ -37,7 +37,7 @@ stages:
 
   HX_2:
     hot_side:
-      inner_length: { value: 0.3, unit: m }
+      inner_length: { value: 1, unit: m }
       inner_diameter: { value: 0.03, unit: m }
       nozzles:
         inlet:
@@ -78,8 +78,8 @@ stages:
 
   HX_3:
     hot_side:
-      tube_inner_diameter: { value: 0.076, unit: m }
-      tube_inner_length: { value: 4.975, unit: m }
+      inner_diameter: { value: 0.076, unit: m }
+      inner_length: { value: 4.975, unit: m }
       tubes_number: { value: 118, unit: dimensionless }
       layout: "triangular"
       pitch: { value: 0.029, unit: m }
@@ -117,7 +117,7 @@ stages:
 
   HX_4:
     hot_side:
-      inner_length: { value: 0.3, unit: m }
+      inner_length: { value: 1, unit: m }
       inner_diameter: { value: 0.03, unit: m }
       nozzles:
         inlet:
@@ -158,8 +158,8 @@ stages:
 
   HX_5:
     hot_side:
-      tube_inner_diameter: { value: 0.076, unit: m }
-      tube_inner_length: { value: 5.620, unit: m }
+      inner_diameter: { value: 0.076, unit: m }
+      inner_length: { value: 5.620, unit: m }
       tubes_number: { value: 100, unit: dimensionless }
       layout: "triangular"
       pitch: { value: 0.029, unit: m }
