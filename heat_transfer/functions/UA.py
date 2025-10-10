@@ -12,7 +12,7 @@ class UA:
     
     @property
     def R_gas(self) -> Q_:
-        h = self.gas.convective_coefficient + self.gas.radiation_coefficient(T_wall=T_wall)
+        h = self.gas.convective_coefficient + self.gas.radiation_coefficient(T_wall=self.T_wall)
         return 1/h
     
     @property
