@@ -1,6 +1,7 @@
 # heat_transfer/functions/htc_water.py
 import math
 from common.units import Q_, ureg
+from heat_transfer.config.models import WaterStream
 
 class Correlations:
     @staticmethod
@@ -100,13 +101,29 @@ class HTCFunctions:
         return Q_(h_tp, "W/(m^2*K)")
 
     @staticmethod
-    def shell(water, D_h: Q_, L: Q_, T_wall: Q_, qpp: Q_, x: float = 0.0) -> Q_:
+    def shell(water:WaterStream, D_h: Q_, L: Q_, T_wall: Q_, qpp: Q_, x: float | None = None) -> Q_:
+        # Single-phase baseline
         h_lo = HTCFunctions.single_phase(water, D_h, L, T_wall).to("W/(m^2*K)").magnitude
-        Tb   = water.temperature.to("K").magnitude
-        qval = qpp.to("W/m^2").magnitude
-        Tw_sp = Tb + qval / h_lo
-        Tsat  = water.saturation_temperature.to("K").magnitude
 
-        if Tw_sp <= Tsat:
+        # Equilibrium quality from bulk enthalpy
+        if x is None:
+            P = water.pressure
+            h_b = (water.enthalpy or water._h).to("J/kg")
+            h_l = water.water_props.h_l_sat(P)
+            h_v = water.water_props.h_v_sat(P)
+            x_eq = ((h_b - h_l) / (h_v - h_l)).to("").magnitude
+            x_eq = 0.0 if x_eq < 0.0 else (1.0 if x_eq > 1.0 else x_eq)
+        else:
+            x_eq = max(0.0, min(1.0, float(x)))
+
+        if x_eq <= 0.0:
             return Q_(h_lo, "W/(m^2*K)")
-        return HTCFunctions.boiling(water, D_h, L, T_wall, qpp, x)
+
+        # Two-phase HTC with quality
+        h_tp = HTCFunctions.boiling(water, D_h, L, T_wall, qpp, x=x_eq).to("W/(m^2*K)").magnitude
+
+        # Smooth blend near onset (optional)
+        w = min(1.0, x_eq / 0.02)
+        h_eff = (1.0 - w) * h_lo + w * h_tp
+        return Q_(h_eff, "W/(m^2*K)")
+

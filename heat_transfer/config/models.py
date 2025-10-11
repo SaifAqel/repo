@@ -2,9 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict
 from common.units import ureg, Q_
-from math import exp, log, sqrt, log10, pi
+from math import exp, log10, pi
 from heat_transfer.functions.fluid_props import WaterProps, GasProps
-from heat_transfer.functions.htc_water import HTCFunctions
 
 @dataclass(frozen=True)
 class Surface:
@@ -182,7 +181,7 @@ class GasStream:
         
         @property
         def mass_flux(self) -> Q_:
-            return self.mass_flow_rate / self.stage.flow_area
+            return self.mass_flow_rate / self.stage.hot_side.flow_area
 
         @property
         def velocity(self) -> Q_:
@@ -193,14 +192,14 @@ class GasStream:
             return (self.density * self.velocity * self.stage.hot_side.inner_diameter) / self.dynamic_viscosity
         
         @property
-        def prandt_number(self) -> Q_:
+        def prandtl_number(self) -> Q_:
             return self.dynamic_viscosity * self.specific_heat / self.thermal_conductivity
         
         @property
         def nusselt_number(self) -> Q_:
             n = 0.3
             Re_mag = self.reynolds_number.magnitude
-            Pr_mag = self.prandt_number.magnitude
+            Pr_mag = self.prandtl_number.magnitude
             nu_mag = 0.023 * (Re_mag ** 0.8) * (Pr_mag ** n)
             return Q_(nu_mag, ureg.dimensionless)
         
@@ -213,33 +212,19 @@ class GasStream:
             return sum(self.composition[s] * self.spectroscopic_data[s] for s in self.composition)
 
         @property
-        def emmissivity(self) -> Q_:
+        def emissivity(self) -> Q_:
             return 1.0 - exp(-self.absorption_coefficient * self.stage.hot_side.path_length)
             
         def radiation_coefficient(self, T_wall) -> Q_:
             sigma = 5.670374419e-8 * ureg.watt / (ureg.meter**2 * ureg.kelvin**4)
             mean_temperature = (self.temperature + T_wall) / 2
-            return 4.0 * sigma * (mean_temperature**3) * self.emmissivity
+            return 4.0 * sigma * (mean_temperature**3) * self.emissivity
 
         @property
-        def friction_factor(self) -> float:
-            f = 0.02 
-            Re = self.reynolds_number.magnitude
-            rel_rough = self.stage.hot_side.rel_roughness
-            tol = 1e-6
-            max_iter = 50
+        def friction_factor(self) -> Q_:
+            f = ( -1.8*log10( (self.stage.hot_side.rel_roughness/3.7)**1.11 + 6.9/self.reynolds_number ) )**-2
+            return Q_( f , "dimensionless")
 
-            for _ in range(max_iter):
-                inner = rel_rough/3.7 + 2.51/(Re * sqrt(f))
-                g = 1.0/sqrt(f) + 2.0*log10(inner)
-                dg = (-0.5)*f**(-1.5) + (2.0/log(10))*(1.0/inner)*(2.51/Re)*(-0.5)*f**(-1.5)
-                f = f - g/dg
-                if abs(g) < tol:
-                    break
-            else:
-                raise RuntimeError("Colebrook did not converge")
-
-            return f
 
 
 
@@ -306,14 +291,13 @@ class WaterStream:
             P = self.pressure
             T = self.temperature
             if self.phase == "liquid":
-                return Q_(self.water_props.rho_l(P, T), "kg/m^3")
+                return self.water_props.rho_l(P, T)
             if self.phase == "vapor":
-                return Q_(self.water_props.rho_v(P, T), "kg/m^3")
+                return self.water_props.rho_v(P, T)
             # saturated mixture: linear interpolation by quality using saturation properties
             rho_l = self.water_props.rho_l_sat(P)
             rho_v = self.water_props.rho_v_sat(P)
-            x = 0.0
-            return Q_(rho_l.magnitude * (1 - x) + rho_v.magnitude * x, "kg/m^3")
+            return Q_(rho_l.magnitude * (1 - self.quality) + rho_v.magnitude * self.quality, "kg/m^3")
 
         @property
         def specific_heat(self) -> Q_:
@@ -367,7 +351,7 @@ class WaterStream:
             return self.water_props.h_fg(P)
 
         @property
-        def prandt_number(self) -> Q_:
+        def prandtl_number(self) -> Q_:
             return self.dynamic_viscosity * self.specific_heat / self.thermal_conductivity
         
         @property
@@ -375,5 +359,5 @@ class WaterStream:
             return self.mass_flow_rate / (self.stage.cold_side.flow_area * self.density)
         
         @property
-        def reynlods_number(self) -> Q_:
+        def reynolds_number(self) -> Q_:
             return self.density * self.velocity * self.stage.cold_side.hydraulic_diameter / self.dynamic_viscosity

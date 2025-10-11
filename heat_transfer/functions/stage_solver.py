@@ -15,7 +15,7 @@ class HeatStageSolver:
     gas: GasStream
     water: WaterStream
 
-    def _wall_flux(self, Tg: Q_, Tc: Q_) -> tuple[Q_, Q_, Q_]:
+    def _wall_flux(self, Tg: Q_, Tc: Q_) -> Q_:
         # Geometry and wall
         ri = (self.stage.hot_side.inner_diameter/2).to("m")
         ro = (self.stage.hot_side.outer_diameter/2).to("m")
