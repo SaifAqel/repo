@@ -29,7 +29,7 @@ class MinCounterflowChain:
             )
             w = WaterStream(
                 mass_flow_rate=self.water.mass_flow_rate,
-                temperature=self.water.temperature,
+                enthalpy=self.water.enthalpy,
                 pressure=PwQ,
                 composition=self.water.composition,
                 stage=stage,
@@ -63,7 +63,7 @@ class MinCounterflowChain:
             )
             w0 = WaterStream(
                 mass_flow_rate=self.water.mass_flow_rate,
-                temperature=self.water.temperature,
+                enthalpy=self.water.enthalpy,
                 pressure=PwQ,
                 composition=self.water.composition,
                 stage=stage,
@@ -92,7 +92,7 @@ class MinCounterflowChain:
                 )
                 w_i = WaterStream(
                     mass_flow_rate=self.water.mass_flow_rate,
-                    temperature=Tw_i,
+                    enthalpy=hw_i,
                     pressure=PwQ,
                     composition=self.water.composition,
                     stage=stage,
@@ -108,16 +108,15 @@ class MinCounterflowChain:
         return profile
 
     def run(self, tol: Q_ = Q_(50.0, "J/kg"), max_iter: int = 10):
-        hw_L_inlet = self.water._h.to("J/kg")
 
-        h0a = hw_L_inlet.to("J/kg")
+        h0a = self.water.enthalpy.to("J/kg")
         h0b = Q_(h0a.magnitude * 0.99, "J/kg")
 
         hwLa = self._terminal_hw(h0a)
-        fa = (hwLa - hw_L_inlet).to("J/kg").magnitude
+        fa = (hwLa - self.water.enthalpy).to("J/kg").magnitude
 
         hwLb = self._terminal_hw(h0b)
-        fb = (hwLb - hw_L_inlet).to("J/kg").magnitude
+        fb = (hwLb - self.water.enthalpy).to("J/kg").magnitude
 
         best_res, best_h0 = abs(fa), h0a
         if abs(fb) < best_res:
@@ -141,7 +140,7 @@ class MinCounterflowChain:
             h0c = Q_(h0c_val, "J/kg")
 
             hwLc = self._terminal_hw(h0c)
-            fc = (hwLc - hw_L_inlet).to("J/kg").magnitude
+            fc = (hwLc - self.water.enthalpy).to("J/kg").magnitude
 
             h0a, fa = h0b, fb
             h0b, fb = h0c, fc

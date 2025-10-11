@@ -158,7 +158,7 @@ class ConfigLoader:
         composition = {k: cls._qty(v) for k, v in node.get("composition", {}).items()}
         return WaterStream(
             mass_flow_rate=cls._qty(node["mass_flow_rate"]),
-            temperature=cls._qty(node["temperature"]),
+            enthalpy=cls._qty(node["enthalpy"]),
             pressure=cls._qty(node["pressure"]),
             composition=composition,
             stage=None,

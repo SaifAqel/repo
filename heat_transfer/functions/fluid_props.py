@@ -1,6 +1,7 @@
 import cantera as ct
 from common.units import ureg, Q_
 from iapws import IAPWS97
+from scipy.optimize import brentq
 
 class GasProps:
     def __init__(self, gas: ct.Solution):
@@ -147,3 +148,28 @@ class WaterProps:
         # single-phase specific enthalpy at P and T
         w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
         return Q_(w.h * 1e3, "J/kg")
+    
+    @staticmethod
+    def T_ph(P: Q_, h: Q_) -> Q_:
+        """Return temperature for given pressure and specific enthalpy."""
+        P_MPa = P.to("megapascal").magnitude
+        h_target = h.to("J/kg").magnitude
+
+        # temperature bounds in kelvin
+        T_min = 273.16
+        T_max = 2000.0
+
+        def f(TK: float) -> float:
+            w = IAPWS97(P=P_MPa, T=TK)
+            return w.h * 1e3 - h_target  # J/kg
+
+        try:
+            T_sol = brentq(f, T_min, T_max)
+        except ValueError:
+            # fallback for subcooled or supercritical cases
+            if f(T_min) > 0:
+                T_sol = T_min
+            else:
+                T_sol = T_max
+
+        return Q_(T_sol, "kelvin")

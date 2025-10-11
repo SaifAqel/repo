@@ -105,6 +105,6 @@ class HeatStageSolver:
         y0 = [
             self.gas.temperature.to("K").magnitude,
             self.gas.pressure.to("Pa").magnitude,
-            self.water._h.to("J/kg").magnitude,
+            self.water.enthalpy.to("J/kg").magnitude,
         ]
         return solve_ivp(self.rhs, (0,L), y0=y0)

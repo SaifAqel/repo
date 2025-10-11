@@ -21,7 +21,7 @@ gas_stream:
 
 water_stream:
   mass_flow_rate: { value: 3.333, unit: kg/s }
-  temperature: { value: 378.15, unit: K }
+  enthalpy: { value: 439000, unit: J/kg }
   pressure: { value: 1000000, unit: Pa }
 
   composition:
