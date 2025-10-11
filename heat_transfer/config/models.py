@@ -102,6 +102,10 @@ class BankGeometry:
     @property
     def rel_roughness(self) -> Q_:
         return self.wall.surfaces.inner.roughness / self.inner_diameter
+    
+    @property
+    def outer_diameter(self): return self.inner_diameter + 2*self.wall.thickness
+
 
 
 @dataclass(frozen=True)
@@ -213,7 +217,7 @@ class GasStream:
 
         @property
         def emissivity(self) -> Q_:
-            return 1.0 - exp(-self.absorption_coefficient * self.stage.hot_side.path_length)
+            return 1.0 - exp(-self.absorption_coefficient.magnitude * self.stage.hot_side.path_length.magnitude)
             
         def radiation_coefficient(self, T_wall) -> Q_:
             sigma = 5.670374419e-8 * ureg.watt / (ureg.meter**2 * ureg.kelvin**4)
@@ -221,9 +225,9 @@ class GasStream:
             return 4.0 * sigma * (mean_temperature**3) * self.emissivity
 
         @property
-        def friction_factor(self) -> Q_:
-            f = ( -1.8*log10( (self.stage.hot_side.rel_roughness/3.7)**1.11 + 6.9/self.reynolds_number ) )**-2
-            return Q_( f , "dimensionless")
+        def friction_factor(self) -> float:
+            f = ( -1.8*log10( (self.stage.hot_side.rel_roughness.magnitude/3.7)**1.11 + 6.9/self.reynolds_number.magnitude ) )**-2
+            return f
 
 
 
@@ -309,8 +313,7 @@ class WaterStream:
                 return self.water_props.cp_v(P, T)
             cp_l = self.water_props.cp_l_sat(P)
             cp_v = self.water_props.cp_v_sat(P)
-            x = 0.0
-            return Q_(cp_l.magnitude * (1 - x) + cp_v.magnitude * x, "J/(kg*K)")
+            return Q_(cp_l.magnitude * (1 - self.quality) + cp_v.magnitude * self.quality, "J/(kg*K)")
 
         @property
         def thermal_conductivity(self) -> Q_:
@@ -322,8 +325,7 @@ class WaterStream:
                 return self.water_props.k_v(P, T)
             k_l = self.water_props.k_l_sat(P)
             k_v = self.water_props.k_v_sat(P)
-            x = 0.0
-            return Q_(k_l.magnitude * (1 - x) + k_v.magnitude * x, "W/(m*K)")
+            return Q_(k_l.magnitude * (1 - self.quality) + k_v.magnitude * self.quality, "W/(m*K)")
 
         @property
         def dynamic_viscosity(self) -> Q_:
@@ -335,8 +337,7 @@ class WaterStream:
                 return self.water_props.mu_v(P, T)
             mu_l = self.water_props.mu_l_sat(P)
             mu_v = self.water_props.mu_v_sat(P)
-            x = 0.0
-            return Q_(mu_l.magnitude * (1 - x) + mu_v.magnitude * x, "Pa*s")
+            return Q_(mu_l.magnitude * (1 - self.quality) + mu_v.magnitude * self.quality, "Pa*s")
 
         @property
         def surface_tension(self) -> Q_:

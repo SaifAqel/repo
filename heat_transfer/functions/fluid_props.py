@@ -9,7 +9,8 @@ class GasProps:
     def _set_state(self, T, P, X):
         T_val = Q_(T).to("K").magnitude if not isinstance(T, (int, float)) else T
         P_val = Q_(P).to("Pa").magnitude if not isinstance(P, (int, float)) else P
-        self.gas.TPX = T_val, P_val, X
+        X_val = {k: v.magnitude for k, v in X.items()}
+        self.gas.TPX = T_val, P_val, X_val
 
     def thermal_conductivity(self, T, P, X):
         self._set_state(T, P, X)
