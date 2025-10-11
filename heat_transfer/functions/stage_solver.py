@@ -62,13 +62,13 @@ class HeatStageSolver:
         h_r = self.gas.radiation_coefficient(Twi_sol).to("W/(m^2*K)")
         qprime = 2*pi*ri * (h_g + h_r) * (Tg - Twi_sol)
         Two = Twi_sol - qprime*log(ro/ri)/(2*pi*kw)
-        return qprime.to("W/m"), Twi_sol.to("K"), Two.to("K")
+        return qprime.to("W/m")
 
     def rhs(self, x, y):
         Tg, pg, hw = y
         TgQ = Q_(Tg, "K")
         pgQ = Q_(pg, "Pa")
-        hwQ = Q_(Tg, "K")
+        hwQ = Q_(hw, "J/kg")
      
         # sync gas state
         self.gas.temperature = TgQ
@@ -81,7 +81,7 @@ class HeatStageSolver:
         TcQ = Q_(w.T, "K")
 
         # local wall solve → heat flux per unit length
-        qprime, Twi, Two = self._wall_flux(TgQ, TcQ)
+        qprime = self._wall_flux(TgQ, TcQ)
 
         # balances
         rho_g = self.gas.density.to("kg/m^3").magnitude
@@ -107,4 +107,4 @@ class HeatStageSolver:
             self.gas.pressure.to("Pa").magnitude,
             self.water._h.to("J/kg").magnitude,
         ]
-        return solve_ivp(self.rhs, [0, L], y0, dense_output=False)
+        return solve_ivp(self.rhs, (0,L), y0=y0)

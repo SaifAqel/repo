@@ -255,6 +255,9 @@ class WaterStream:
         stage: FirePass | SmokePass | Reversal
         water_props: WaterProps
 
+        enthalpy: Q_ = None
+
+
         @property
         def saturation_temperature(self) -> Q_:
             return self.water_props.Tsat(self.pressure)
