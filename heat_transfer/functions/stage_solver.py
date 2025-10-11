@@ -75,30 +75,18 @@ class HeatStageSolver:
         self.gas.pressure = pgQ
         self.water.enthalpy = hwQ
 
-        # water bulk temperature from (P, h)
         PwQ = self.water.pressure
         w = IAPWS97(P=PwQ.to("megapascal").magnitude, h=hwQ.to("kJ/kg").magnitude)
         TcQ = Q_(w.T, "K")
 
-        # local wall solve → heat flux per unit length
-        qprime = self._wall_flux(TgQ, TcQ)
+        heat_flux_per_length = self._wall_flux(TgQ, TcQ)
 
-        # balances
-        rho_g = self.gas.density.to("kg/m^3").magnitude
-        cp_g  = self.gas.specific_heat.to("J/(kg*K)").magnitude
-        D     = self.stage.hot_side.inner_diameter.to("m").magnitude
-        A     = (pi*D**2/4)
-        m_g   = self.gas.mass_flow_rate.to("kg/s").magnitude
-        P     = pi*D
-        v_g   = m_g/(rho_g*A)
-        fD    = self.gas.friction_factor
+        dT_gas_dx      = (- heat_flux_per_length / (self.gas.mass_flow_rate * self.gas.specific_heat)).to("kelvin/meter").magnitude
+        dP_gas_dx      = (- self.gas.friction_factor * self.gas.density * self.gas.velocity**2 / (2.0 * self.stage.hot_side.hydraulic_diameter)).to("pascal/meter").magnitude
+        dH_water_dx    =   (heat_flux_per_length / self.water.mass_flow_rate).to("joule/(kilogram*meter)").magnitude
 
-        m_w   = self.water.mass_flow_rate.to("kg/s").magnitude
 
-        dTgdx = - qprime.to("W/m").magnitude / (m_g*cp_g)
-        dpdx  = - fD * rho_g * v_g**2 / (2*D)
-        dhwdx =   qprime.to("W/m").magnitude /  m_w
-        return [dTgdx, dpdx, dhwdx]
+        return [dT_gas_dx, dP_gas_dx, dH_water_dx]
 
     def solve(self):
         L = self.stage.hot_side.inner_length.to("m").magnitude

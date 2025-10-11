@@ -57,6 +57,10 @@ class TubeGeometry:
     @property
     def path_length(self) -> Q_:
         return self.inner_diameter * 0.9
+    
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return self.inner_diameter
 
 @dataclass(frozen=True)
 class ReversalGeometry:
@@ -86,6 +90,10 @@ class ReversalGeometry:
     def path_length(self) -> Q_:
         return self.inner_diameter * 0.9
     
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return self.inner_diameter
+    
 @dataclass(frozen=True)
 class BankGeometry:
     inner_diameter: Q_
@@ -105,6 +113,10 @@ class BankGeometry:
     
     @property
     def outer_diameter(self): return self.inner_diameter + 2*self.wall.thickness
+
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return self.inner_diameter
 
 
 
@@ -193,7 +205,7 @@ class GasStream:
 
         @property
         def reynolds_number(self) -> Q_:
-            return (self.density * self.velocity * self.stage.hot_side.inner_diameter) / self.dynamic_viscosity
+            return (self.density * self.velocity * self.stage.hot_side.hydraulic_diameter) / self.dynamic_viscosity
         
         @property
         def prandtl_number(self) -> Q_:
