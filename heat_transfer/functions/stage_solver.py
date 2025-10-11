@@ -4,7 +4,7 @@ from math import pi, log
 from scipy.integrate import solve_ivp
 from scipy.optimize import brentq
 from common.units import Q_, ureg
-from heat_transfer.config.models import GasStream, WaterStream, FirePass, SmokePass, Reversal
+from heat_transfer.config.models import GasStream, WaterStream, FirePass, SmokePass, Reversal, BankGeometry
 from heat_transfer.functions.htc_water import HTCFunctions
 from iapws import IAPWS97
 import numpy as np
@@ -35,7 +35,7 @@ class HeatStageSolver:
             Two = Twi - qprime_hot*log(ro/ri)/(2*pi*kw)
             # Cold-side HTC at Two
             qpp_hot = (qprime_hot / (2*pi*ro)).to("W/m^2")
-            h_w = HTCFunctions.shell(self.water, Dh_shell, L, Two, qpp_hot, x=0.0)
+            h_w = HTCFunctions.shell(self.water, Dh_shell, L, Two, qpp_hot)
             qprime_cold = 2*pi*ro * h_w * (Two - Tc)
             return (qprime_hot - qprime_cold).to("W/m").magnitude
 
@@ -60,7 +60,9 @@ class HeatStageSolver:
         Twi_sol = Q_(brentq(F, a, b), "K")
         # Recover flux and Two
         h_r = self.gas.radiation_coefficient(Twi_sol).to("W/(m^2*K)")
-        qprime = 2*pi*ri * (h_g + h_r) * (Tg - Twi_sol)
+        qprime = 2 * pi * ri * (h_g + h_r) * (Tg - Twi_sol)
+        if isinstance(self.stage.hot_side, BankGeometry):
+            qprime *= getattr(self.stage.hot_side, "number_of_tubes", 1)
         Two = Twi_sol - qprime*log(ro/ri)/(2*pi*kw)
         return qprime.to("W/m")
 
@@ -76,10 +78,8 @@ class HeatStageSolver:
         self.water.enthalpy = hwQ
 
         PwQ = self.water.pressure
-        w = IAPWS97(P=PwQ.to("megapascal").magnitude, h=hwQ.to("kJ/kg").magnitude)
-        TcQ = Q_(w.T, "K")
-
-        heat_flux_per_length = self._wall_flux(TgQ, TcQ)
+        TwQ = self.water.water_props.T_ph(PwQ, hwQ)
+        heat_flux_per_length = self._wall_flux(TgQ, TwQ)
 
         dT_gas_dx      = (- heat_flux_per_length / (self.gas.mass_flow_rate * self.gas.specific_heat)).to("kelvin/meter")
         dP_gas_dx = (

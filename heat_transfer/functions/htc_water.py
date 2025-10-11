@@ -108,7 +108,7 @@ class HTCFunctions:
         # Equilibrium quality from bulk enthalpy
         if x is None:
             P = water.pressure
-            h_b = (water.enthalpy or water._h).to("J/kg")
+            h_b = (water.enthalpy).to("J/kg")
             h_l = water.water_props.h_l_sat(P)
             h_v = water.water_props.h_v_sat(P)
             x_eq = ((h_b - h_l) / (h_v - h_l)).to("").magnitude

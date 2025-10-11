@@ -282,7 +282,7 @@ class GasStream:
 
         @property
         def emissivity(self) -> Q_:
-            return 1.0 - exp(-self.absorption_coefficient.magnitude * self.stage.hot_side.path_length.magnitude)
+            return Q_(1.0 - exp((-self.absorption_coefficient * self.stage.hot_side.path_length).magnitude), "dimensionless")
             
         def radiation_coefficient(self, T_wall) -> Q_:
             sigma = 5.670374419e-8 * ureg.watt / (ureg.meter**2 * ureg.kelvin**4)

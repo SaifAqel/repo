@@ -29,7 +29,7 @@ class MinCounterflowChain:
             )
             w = WaterStream(
                 mass_flow_rate=self.water.mass_flow_rate,
-                enthalpy=self.water.enthalpy,
+                enthalpy=hwQ,
                 pressure=PwQ,
                 composition=self.water.composition,
                 stage=stage,
@@ -46,7 +46,6 @@ class MinCounterflowChain:
         TgQ = self.gas.temperature.to("K")
         pgQ = self.gas.pressure.to("Pa")
         hwQ = hw0.to("J/kg")
-        PwQ = self.water.pressure
 
         profile = []
         x_offset = 0.0
@@ -63,8 +62,8 @@ class MinCounterflowChain:
             )
             w0 = WaterStream(
                 mass_flow_rate=self.water.mass_flow_rate,
-                enthalpy=self.water.enthalpy,
-                pressure=PwQ,
+                enthalpy=hwQ,
+                pressure=self.water.pressure,
                 composition=self.water.composition,
                 stage=stage,
                 water_props=self.water.water_props,
@@ -78,9 +77,6 @@ class MinCounterflowChain:
                 pg_i = Q_(sol.y[1, i], "Pa")
                 hw_i = Q_(sol.y[2, i], "J/kg")
 
-                w_state = IAPWS97(P=PwQ.to("megapascal").magnitude, h=hw_i.to("kJ/kg").magnitude)
-                Tw_i = Q_(w_state.T, "K")
-
                 g_i = GasStream(
                     mass_flow_rate=self.gas.mass_flow_rate,
                     temperature=Tg_i,
@@ -93,7 +89,7 @@ class MinCounterflowChain:
                 w_i = WaterStream(
                     mass_flow_rate=self.water.mass_flow_rate,
                     enthalpy=hw_i,
-                    pressure=PwQ,
+                    pressure=self.water.pressure,
                     composition=self.water.composition,
                     stage=stage,
                     water_props=self.water.water_props,
