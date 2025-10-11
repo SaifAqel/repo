@@ -26,6 +26,7 @@ class Wall:
 @dataclass(frozen=True)
 class Nozzle:
     k: Q_
+    
 @dataclass(frozen=True)
 class Nozzles:
     inlet: Nozzle
@@ -117,8 +118,61 @@ class BankGeometry:
     @property
     def hydraulic_diameter(self) -> Q_:
         return self.inner_diameter
+    
+    @property
+    def path_length(self) -> Q_:
+        return self.inner_diameter * 0.9
+
+@dataclass(frozen=True)
+class EconomiserHot:
+    inner_length: Q_
+    inner_diameter: Q_
+    wall: Wall
+
+    @property
+    def flow_area(self) -> Q_:
+        return  pi * (self.inner_diameter / 2 )**2
+    
+    @property
+    def rel_roughness(self) -> Q_:
+        return self.wall.surfaces.inner.roughness / self.inner_diameter
+    
+    @property
+    def outer_diameter(self): return self.inner_diameter + 2*self.wall.thickness
+
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return self.inner_diameter
+    
+    @property
+    def path_length(self) -> Q_:
+        return self.inner_diameter * 0.9
 
 
+@dataclass(frozen=True)
+class EconomiserCold:
+    inner_length: Q_
+    inner_diameter: Q_
+    wall: Wall
+
+    @property
+    def flow_area(self) -> Q_:
+        return pi * (self.inner_diameter / 2 )**2
+    
+    @property
+    def rel_roughness(self) -> Q_:
+        return self.wall.surfaces.inner.roughness / self.inner_diameter
+    
+    @property
+    def outer_diameter(self): return self.inner_diameter + 2*self.wall.thickness
+
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return self.inner_diameter
+    
+    @property
+    def path_length(self) -> Q_:
+        return self.inner_diameter * 0.9
 
 @dataclass(frozen=True)
 class ShellGeometry:
@@ -130,7 +184,7 @@ class ShellGeometry:
     def hydraulic_diameter(self) -> Q_:
         return 4 * self.flow_area / self.wetted_perimeter
 
-
+######################### Stages #########################
 
 @dataclass(frozen=True)
 class FirePass:
@@ -149,9 +203,8 @@ class Reversal:
 
 @dataclass(frozen=True)
 class Economiser:
-    hot_side: Q_
-    cold_side: Q_
-
+    hot_side: EconomiserHot
+    cold_side: EconomiserCold
 
 @dataclass(frozen=True)
 class Stages:
@@ -166,7 +219,7 @@ class Stages:
         return iter((self.HX_1, self.HX_2, self.HX_3, self.HX_4, self.HX_5, self.HX_6))
 
 
-
+######################### Streams #########################
 
 @dataclass
 class GasStream:

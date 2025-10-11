@@ -7,7 +7,8 @@ from common.units import ureg, Q_
 # import your dataclasses here (assumes they are in the same module or adjust import)
 from heat_transfer.config.models import (Wall, Surface, Surfaces, Nozzle, TubeGeometry, ReversalGeometry,
                                          Nozzles, ShellGeometry, FirePass, SmokePass, Reversal, BankGeometry,
-                                         Economiser, Stages, GasStream, WaterStream, GasProps, WaterProps)
+                                         Economiser, Stages, GasStream, WaterStream, GasProps, WaterProps,
+                                         EconomiserHot, EconomiserCold)
 
 class ConfigLoader:
     @staticmethod
@@ -93,6 +94,22 @@ class ConfigLoader:
         )
 
     @classmethod
+    def _build_economiser_hot(cls, node: Dict[str, Any]) -> EconomiserHot:
+        return EconomiserHot(
+            inner_length=cls._qty(node["inner_length"]),
+            inner_diameter=cls._qty(node["inner_diameter"]),
+            wall=cls._build_wall(node["wall"])
+        )
+
+    @classmethod
+    def _build_economiser_cold(cls, node: Dict[str, Any]) -> EconomiserCold:
+        return EconomiserCold(
+            inner_length=cls._qty(node["inner_length"]),
+            inner_diameter=cls._qty(node["inner_diameter"]),
+            wall=cls._build_wall(node["wall"])
+        )
+
+    @classmethod
     def _build_shell_geometry(cls, node: Dict[str, Any]) -> ShellGeometry:
         return ShellGeometry(
             flow_area=cls._qty(node["flow_area"]),
@@ -121,11 +138,15 @@ class ConfigLoader:
             cold_side=cls._build_shell_geometry(node["cold_side"])
         )
     
+
+
+        
+
     @classmethod
     def _build_economiser(cls, node: Dict[str, Any]) -> Economiser:
         return Economiser(
-            hot_side=cls._qty(node["hot_side"]),
-            cold_side=cls._qty(node["cold_side"])
+            hot_side=cls._build_economiser_hot(node["hot_side"]),
+            cold_side=cls._build_economiser_cold(node["cold_side"])
         )
 
     @classmethod
