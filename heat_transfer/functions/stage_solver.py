@@ -81,12 +81,19 @@ class HeatStageSolver:
 
         heat_flux_per_length = self._wall_flux(TgQ, TcQ)
 
-        dT_gas_dx      = (- heat_flux_per_length / (self.gas.mass_flow_rate * self.gas.specific_heat)).to("kelvin/meter").magnitude
-        dP_gas_dx      = (- self.gas.friction_factor * self.gas.density * self.gas.velocity**2 / (2.0 * self.stage.hot_side.hydraulic_diameter)).to("pascal/meter").magnitude
-        dH_water_dx    =   (heat_flux_per_length / self.water.mass_flow_rate).to("joule/(kilogram*meter)").magnitude
+        dT_gas_dx      = (- heat_flux_per_length / (self.gas.mass_flow_rate * self.gas.specific_heat)).to("kelvin/meter")
+        dP_gas_dx = (
+            (
+                - self.gas.friction_factor * self.gas.density * self.gas.velocity**2 / (2.0 * self.stage.hot_side.hydraulic_diameter)
+                - (self.gas.density * self.gas.velocity**2 / self.gas.temperature) * dT_gas_dx
+            ) / (
+                1.0 - (self.gas.density * self.gas.velocity**2 / self.gas.pressure)
+            )
+        ).to("pascal/meter")
+        dH_water_dx    =   (heat_flux_per_length / self.water.mass_flow_rate).to("joule/(kilogram*meter)")
 
 
-        return [dT_gas_dx, dP_gas_dx, dH_water_dx]
+        return [dT_gas_dx.magnitude, dP_gas_dx.magnitude, dH_water_dx.magnitude]
 
     def solve(self):
         L = self.stage.hot_side.inner_length.to("m").magnitude
