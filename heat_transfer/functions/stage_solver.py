@@ -62,7 +62,7 @@ class HeatStageSolver:
         h_r = self.gas.radiation_coefficient(Twi_sol).to("W/(m^2*K)")
         qprime = 2 * pi * ri * (h_g + h_r) * (Tg - Twi_sol)
         if isinstance(self.stage.hot_side, BankGeometry):
-            qprime *= getattr(self.stage.hot_side, "number_of_tubes", 1)
+            qprime *= self.stage.hot_side.tubes_number.to("").magnitude
         Two = Twi_sol - qprime*log(ro/ri)/(2*pi*kw)
         return qprime.to("W/m")
 

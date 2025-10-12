@@ -21,9 +21,13 @@ class Correlations:
     @staticmethod
     def gungor_winterton(h_lo: float, G: float, qpp: float, x: float,
                           rho_l: float, rho_v: float, mu_l: float, mu_v: float, h_fg: float) -> float:
-        Bo  = qpp / (G * h_fg)
-        Xtt = ((1.0 - x) / x) ** 0.9 * (rho_v / rho_l) ** 0.5 * (mu_l / mu_v) ** 0.1 if x > 0.0 else float('inf')
-        return h_lo * (1.0 + 3000.0 * Bo ** 0.86 + 1.12 * Xtt ** -0.75 if x > 0.0 else 1.0 + 3000.0 * Bo ** 0.86)
+        Bo = qpp / max(G * h_fg, 1e-16)  # guard
+        if x <= 0.0:
+            return h_lo * (1.0 + 3000.0 * Bo**0.86)
+        # clamp to avoid singularities near 0 or 1
+        x_clamped = min(max(x, 1e-6), 1.0 - 1e-6)
+        Xtt = ((1.0 - x_clamped) / x_clamped)**0.9 * (rho_v / rho_l)**0.5 * (mu_l / mu_v)**0.1
+        return h_lo * (1.0 + 3000.0 * Bo**0.86 + 1.12 * Xtt**-0.75)
 
 
 class HTCFunctions:
