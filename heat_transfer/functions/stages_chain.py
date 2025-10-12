@@ -1,9 +1,11 @@
+# heat_transfer/functions/stages_chain.py
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import List, Tuple
 from common.units import Q_
-from heat_transfer.config.models import GasStream, WaterStream, Stages
-from heat_transfer.functions.stage_solver import HeatStageSolver
-from iapws import IAPWS97
+from heat_transfer.config.models import Stages, GasStream, WaterStream
+from heat_transfer.functions.stage_solver import StageSolver
+
 
 @dataclass
 class MinCounterflowChain:
@@ -11,143 +13,96 @@ class MinCounterflowChain:
     gas: GasStream
     water: WaterStream
 
-    def _terminal_hw(self, hw0: Q_) -> Q_:
-        TgQ = self.gas.temperature.to("K")
-        pgQ = self.gas.pressure.to("Pa")
-        hwQ = hw0.to("J/kg")
-        PwQ = self.water.pressure
+    def run(self, tol: Q_ = Q_(1.0, "J/kg"), max_iter: int = 12):
+        stage_list = [self.stages.HX_1, self.stages.HX_2, self.stages.HX_3,
+                      self.stages.HX_4, self.stages.HX_5, self.stages.HX_6]
 
-        for stage in self.stages:
-            g = GasStream(
-                mass_flow_rate=self.gas.mass_flow_rate,
-                temperature=TgQ,
-                pressure=pgQ,
-                composition=self.gas.composition,
-                spectroscopic_data=self.gas.spectroscopic_data,
-                stage=stage,
-                gas_props=self.gas.gas_props,
-            )
-            w = WaterStream(
-                mass_flow_rate=self.water.mass_flow_rate,
-                enthalpy=hwQ,
-                pressure=PwQ,
-                composition=self.water.composition,
-                stage=stage,
-                water_props=self.water.water_props,
-            )
-            sol = HeatStageSolver(stage=stage, gas=g, water=w).solve()
-            TgQ = Q_(sol.y[0, -1], "K")
-            pgQ = Q_(sol.y[1, -1], "Pa")
-            hwQ = Q_(sol.y[2, -1], "J/kg")
+        hw_in = [self.water.enthalpy for _ in stage_list]
 
-        return hwQ
+        Tg_in = self.gas.temperature
+        pg_in = self.gas.pressure
 
-    def _simulate_profile(self, hw0: Q_):
-        TgQ = self.gas.temperature.to("K")
-        pgQ = self.gas.pressure.to("Pa")
-        hwQ = hw0.to("J/kg")
+        best = None
 
-        profile = []
-        x_offset = 0.0
+        for it in range(max_iter):
+            Tg_i, pg_i = Tg_in, pg_in
 
-        for stage in self.stages:
-            g0 = GasStream(
-                mass_flow_rate=self.gas.mass_flow_rate,
-                temperature=TgQ,
-                pressure=pgQ,
-                composition=self.gas.composition,
-                spectroscopic_data=self.gas.spectroscopic_data,
-                stage=stage,
-                gas_props=self.gas.gas_props,
-            )
-            w0 = WaterStream(
-                mass_flow_rate=self.water.mass_flow_rate,
-                enthalpy=hwQ,
-                pressure=self.water.pressure,
-                composition=self.water.composition,
-                stage=stage,
-                water_props=self.water.water_props,
-            )
+            profile: List[Tuple[Q_, GasStream, WaterStream]] = []
+            x_offset = Q_(0.0, "m")
 
-            sol = HeatStageSolver(stage=stage, gas=g0, water=w0).solve()
+            cold_out_per_stage: List[Q_] = [None] * 6
 
-            for i in range(sol.t.size):
-                x_i = x_offset + sol.t[i]
-                Tg_i = Q_(sol.y[0, i], "K")
-                pg_i = Q_(sol.y[1, i], "Pa")
-                hw_i = Q_(sol.y[2, i], "J/kg")
-
-                g_i = GasStream(
+            for i, stg in enumerate(stage_list):
+                g = GasStream(
                     mass_flow_rate=self.gas.mass_flow_rate,
                     temperature=Tg_i,
                     pressure=pg_i,
                     composition=self.gas.composition,
                     spectroscopic_data=self.gas.spectroscopic_data,
-                    stage=stage,
+                    stage=stg,
                     gas_props=self.gas.gas_props,
                 )
-                w_i = WaterStream(
+                w = WaterStream(
                     mass_flow_rate=self.water.mass_flow_rate,
-                    enthalpy=hw_i,
+                    enthalpy=hw_in[i],
                     pressure=self.water.pressure,
                     composition=self.water.composition,
-                    stage=stage,
+                    stage=stg,
                     water_props=self.water.water_props,
                 )
-                profile.append((Q_(x_i, "m"), g_i, w_i))
 
-            x_offset += sol.t[-1]
-            TgQ = Q_(sol.y[0, -1], "K")
-            pgQ = Q_(sol.y[1, -1], "Pa")
-            hwQ = Q_(sol.y[2, -1], "J/kg")
+                sol = StageSolver(stage=stg, gas=g, water=w).solve()
 
-        return profile
+                Tg_i = Q_(sol.y[0, -1], "K")
+                pg_i = Q_(sol.y[1, -1], "Pa")
+                hw_o = Q_(sol.y[2, -1], "J/kg")
+                cold_out_per_stage[i] = hw_o
 
-    def run(self, tol: Q_ = Q_(50.0, "J/kg"), max_iter: int = 10):
+                for k in range(sol.t.size):
+                    x = x_offset + Q_(sol.t[k], "m")
+                    gk = GasStream(
+                        mass_flow_rate=self.gas.mass_flow_rate,
+                        temperature=Q_(sol.y[0, k], "K"),
+                        pressure=Q_(sol.y[1, k], "Pa"),
+                        composition=self.gas.composition,
+                        spectroscopic_data=self.gas.spectroscopic_data,
+                        stage=stg,
+                        gas_props=self.gas.gas_props,
+                    )
+                    wk = WaterStream(
+                        mass_flow_rate=self.water.mass_flow_rate,
+                        enthalpy=Q_(sol.y[2, k], "J/kg"),
+                        pressure=self.water.pressure,
+                        composition=self.water.composition,
+                        stage=stg,
+                        water_props=self.water.water_props,
+                    )
+                    profile.append((x, gk, wk))
 
-        h0a = self.water.enthalpy.to("J/kg")
-        h0b = Q_(h0a.magnitude * 0.99, "J/kg")
+                x_offset += Q_(sol.t[-1], "m")
 
-        hwLa = self._terminal_hw(h0a)
-        fa = (hwLa - self.water.enthalpy).to("J/kg").magnitude
+            hw_in_new = hw_in[:]
+            hw_in_new[5] = self.water.enthalpy
+            hw_in_new[4] = cold_out_per_stage[5]
+            hw_in_new[3] = cold_out_per_stage[4]
+            hw_in_new[2] = cold_out_per_stage[3]
+            hw_in_new[1] = cold_out_per_stage[2]
+            hw_in_new[0] = cold_out_per_stage[1]
 
-        hwLb = self._terminal_hw(h0b)
-        fb = (hwLb - self.water.enthalpy).to("J/kg").magnitude
+            res = max(abs((hw_in_new[j] - hw_in[j]).to("J/kg").magnitude) for j in range(6))
 
-        best_res, best_h0 = abs(fa), h0a
-        if abs(fb) < best_res:
-            best_res, best_h0 = abs(fb), h0b
+            best = {
+                "converged": res <= tol.to("J/kg").magnitude,
+                "iterations": it + 1,
+                "hw0": hw_in_new[5],
+                "residual": Q_(res, "J/kg"),
+                "profile": profile,
+            }
 
-        for k in range(max_iter):
-            if abs(fb) <= tol.to("J/kg").magnitude:
-                return {
-                    "converged": True,
-                    "iterations": k + 2,
-                    "hw0": h0b,
-                    "residual": Q_(fb, "J/kg"),
-                    "profile": self._simulate_profile(h0b),
-                }
-            if fb == fa:
+            hw_in = hw_in_new
+            if best["converged"]:
                 break
 
-            h0c_val = h0b.to("J/kg").magnitude - fb * (
-                h0b.to("J/kg").magnitude - h0a.to("J/kg").magnitude
-            ) / (fb - fa)
-            h0c = Q_(h0c_val, "J/kg")
+            Tg_in, pg_in = Tg_i, pg_i
 
-            hwLc = self._terminal_hw(h0c)
-            fc = (hwLc - self.water.enthalpy).to("J/kg").magnitude
-
-            h0a, fa = h0b, fb
-            h0b, fb = h0c, fc
-
-            if abs(fb) < best_res:
-                best_res, best_h0 = abs(fb), h0b
-
-        return {
-            "converged": False,
-            "iterations": max_iter,
-            "hw0": best_h0,
-            "residual": Q_(best_res, "J/kg"),
-            "profile": self._simulate_profile(best_h0),
-        }
+        return best
