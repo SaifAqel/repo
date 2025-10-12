@@ -1,133 +1,186 @@
-# heat_transfer/functions/htc_water.py
+# water_htc.py
+from __future__ import annotations
+
 import math
-from common.units import Q_, ureg
-from heat_transfer.config.models import WaterStream
+from dataclasses import dataclass
+from typing import Literal, List
 
-class Correlations:
-    @staticmethod
-    def sieder_tate(Re: float, Pr: float, Dh_m: float, L_m: float, mu: float, mu_w: float, k: float) -> float:
-        Nu = 1.86 * ((Re * Pr * Dh_m / L_m) ** (1.0 / 3.0)) * (mu / mu_w) ** 0.14
-        return Nu * k / Dh_m
+from common.units import Q_
+from heat_transfer.config.models import WaterStream, GasStream, FirePass, SmokePass, Reversal, Economiser
 
-    @staticmethod
-    def petukhov_friction_factor(Re: float) -> float:
-        return (0.79 * math.log(Re) - 1.64) ** (-2.0)
-
-    @staticmethod
-    def gnielinski(Re: float, Pr: float, Dh_m: float, k: float, f: float) -> float:
-        Nu = (f / 8.0) * (Re - 1000.0) * Pr / (1.0 + 12.7 * (f / 8.0) ** 0.5 * (Pr ** (2.0 / 3.0) - 1.0))
-        return Nu * k / Dh_m
-
-    @staticmethod
-    def gungor_winterton(h_lo: float, G: float, qpp: float, x: float,
-                          rho_l: float, rho_v: float, mu_l: float, mu_v: float, h_fg: float) -> float:
-        Bo = qpp / max(G * h_fg, 1e-16)  # guard
-        if x <= 0.0:
-            return h_lo * (1.0 + 3000.0 * Bo**0.86)
-        # clamp to avoid singularities near 0 or 1
-        x_clamped = min(max(x, 1e-6), 1.0 - 1e-6)
-        Xtt = ((1.0 - x_clamped) / x_clamped)**0.9 * (rho_v / rho_l)**0.5 * (mu_l / mu_v)**0.1
-        return h_lo * (1.0 + 3000.0 * Bo**0.86 + 1.12 * Xtt**-0.75)
+# -------- types --------
+Zone  = Literal["firepass", "smokepass", "reversal", "economiser"]
+Phase = Literal["subcooled", "twophase", "superheated"]
+Regime = Literal["laminar", "turbulent"]
 
 
-class HTCFunctions:
-    @staticmethod
-    def single_phase(water, D_h: Q_, L: Q_, T_wall: Q_) -> Q_:
-        rho = water.density.to("kg/m^3").magnitude
-        mu  = water.dynamic_viscosity.to("Pa*s").magnitude
-        k   = water.thermal_conductivity.to("W/(m*K)").magnitude
-        cp  = water.specific_heat.to("J/(kg*K)").magnitude
-        v   = water.velocity.to("m/s").magnitude
-        Dh  = D_h.to("m").magnitude
-        Lm  = L.to("m").magnitude
-        
-        # Guard: avoid property calls at nonphysical wall temperatures during bracketing.
-        # If T_wall is outside IF97 range, use bulk viscosity for μ_w.
-        T_wK = T_wall.to("K").magnitude
-        if 273.16 <= T_wK <= 1073.15:
-            Tsat = water.saturation_temperature
-            mu_w_Q = (water.water_props.mu_l(water.pressure, T_wall)
-                      if T_wall <= Tsat else water.water_props.mu_v(water.pressure, T_wall))
-            mu_w = mu_w_Q.to("Pa*s").magnitude
-        else:
-            mu_w = mu  # fallback only affects the (μ/μw)^0.14 correction in Sieder–Tate
+@dataclass(frozen=True)
+class BankBand:
+    """Correlation band for Zukauskas-style tube-bank crossflow."""
+    re_min: float
+    re_max: float
+    c: float
+    m: float
+    n: float
 
-        Re = rho * v * Dh / mu
-        Pr = mu * cp / k
 
-        if Re < 2300.0:
-            h = Correlations.sieder_tate(Re, Pr, Dh, Lm, mu, mu_w, k)
-        else:
-            f = Correlations.petukhov_friction_factor(Re)
-            h = Correlations.gnielinski(Re, Pr, Dh, k, f)
+class WaterHTC:
+    """
+    Compute water-side HTC with:
+      - Phase switching: subcooled/superheated -> single-phase; twophase -> Gungor-Winterton.
+      - Zone switching: firepass/smokepass/economiser (tube-bank crossflow) or reversal (curved crossflow).
+      - Regime switching: laminar vs turbulent attributes where provided, with fallback to generic.
+    Attributes required on `self` are accessed dynamically as <base>_<zone>[_<regime>].
+    """
 
-        return Q_(h, "W/(m^2*K)")
+    def __init__(self, stage: FirePass | SmokePass | Reversal | Economiser, water: WaterStream, gas: GasStream):
+        self.stage = stage
+        self.water = water
+        self.gas = gas
 
-    @staticmethod
-    def boiling(water, D_h: Q_, L: Q_, T_wall: Q_, qpp: Q_, x: float = 0.0) -> Q_:
-        rho_l = water.density.to("kg/m^3").magnitude
-        mu_l  = water.dynamic_viscosity.to("Pa*s").magnitude
-        k_l   = water.thermal_conductivity.to("W/(m*K)").magnitude
-        cp_l  = water.specific_heat.to("J/(kg*K)").magnitude
-        v     = water.velocity.to("m/s").magnitude
-        Dh    = D_h.to("m").magnitude
-        Lm    = L.to("m").magnitude
+    # ---------- phase / regime / zone ----------
+    def phase_case(self) -> Phase:
+        x = self.water.quality.magnitude
+        if x < 0:
+            return "subcooled"
+        if x <= 1:
+            return "twophase"
+        return "superheated"
 
-        P = water.pressure
-        h_fg = water.latent_heat_of_vaporization.to("J/kg").magnitude
-        rho_v = water.water_props.rho_v_sat(P).to("kg/m^3").magnitude
-        mu_v  = water.water_props.mu_v_sat(P).to("Pa*s").magnitude
+    def flow_regime(self) -> Regime:
+        return "turbulent" if self.water.reynolds_number >= Q_(1200, "dimensionless") else "laminar"
 
-        Re = rho_l * v * Dh / mu_l
-        Pr = mu_l * cp_l / k_l
+    def zone(self) -> Zone:
+        return self.stage.__class__.__name__.lower()
 
-        # Only use wall μ if T_wall is within IF97 range. Otherwise use bulk μ.
-        T_wK = T_wall.to("K").magnitude
-        if 273.16 <= T_wK <= 1073.15:
-            Tsat = water.saturation_temperature
-            mu_w_Q = (water.water_props.mu_l(P, T_wall)
-                      if T_wall <= Tsat else water.water_props.mu_v(P, T_wall))
-            mu_w = mu_w_Q.to("Pa*s").magnitude
-        else:
-            mu_w = mu_l
+    # ---------- public API ----------
+    def compute_htc(self):
+        z = self.zone()
+        p = self.phase_case()
+        if p in {"subcooled", "superheated"}:
+            return self._h_singlephase(z)
+        if p == "twophase":
+            return self._h_twophase(z)
+        raise ValueError(f"Unknown phase: {p}")
 
-        if Re < 2300.0:
-            h_lo = Correlations.sieder_tate(Re, Pr, Dh, Lm, mu_l, mu_w, k_l)
-        else:
-            f = Correlations.petukhov_friction_factor(Re)
-            h_lo = Correlations.gnielinski(Re, Pr, Dh, k_l, f)
+    # ---------- regime-aware attribute picker ----------
+    def _pick(self, *, zone: Zone, base: str):
+        """
+        Return regime-specific attribute if present, else generic.
+        Looks for <base>_<zone>_<regime> then <base>_<zone>.
+        """
+        regime = self.flow_regime()
+        name_regime = f"{base}_{zone}_{regime}"
+        if hasattr(self, name_regime):
+            return getattr(self, name_regime)
+        name_generic = f"{base}_{zone}"
+        if hasattr(self, name_generic):
+            return getattr(self, name_generic)
+        raise AttributeError(f"Missing attribute for base='{base}' zone='{zone}' "
+                             f"(looked for '{name_regime}' and '{name_generic}')")
 
-        A = water.stage.cold_side.flow_area.to("m^2").magnitude
-        G = water.mass_flow_rate.to("kg/s").magnitude / A
-        qpp_val = qpp.to("W/m^2").magnitude
-
-        h_tp = Correlations.gungor_winterton(h_lo, G, qpp_val, x, rho_l, rho_v, mu_l, mu_v, h_fg)
-        return Q_(h_tp, "W/(m^2*K)")
+    # ---------- correlations (static) ----------
+    def nusselt_churchill_bernstein(self):
+        term1 = 0.3
+        term2 = (0.62 * self.water.reynolds_number**0.5 * self.water.prandtl_number**(1/3)) / ((1 + (0.4 / self.water.prandtl_number)**(2/3))**0.25)
+        term3 = (1 + (self.water.reynolds_number / 282000)**(5/8))**(4/5)
+        return term1 + term2 * term3
 
     @staticmethod
-    def shell(water:WaterStream, D_h: Q_, L: Q_, T_wall: Q_, qpp: Q_, x: float | None = None) -> Q_:
-        # Single-phase baseline
-        h_lo = HTCFunctions.single_phase(water, D_h, L, T_wall).to("W/(m^2*K)").magnitude
+    def heat_transfer_coefficient_from_nusselt(nusselt, thermal_conductivity, characteristic_diameter):
+        return nusselt * thermal_conductivity / characteristic_diameter
 
-        # Equilibrium quality from bulk enthalpy
-        if x is None:
-            P = water.pressure
-            h_b = (water.enthalpy).to("J/kg")
-            h_l = water.water_props.h_l_sat(P)
-            h_v = water.water_props.h_v_sat(P)
-            x_eq = ((h_b - h_l) / (h_v - h_l)).to("").magnitude
-            x_eq = 0.0 if x_eq < 0.0 else (1.0 if x_eq > 1.0 else x_eq)
-        else:
-            x_eq = max(0.0, min(1.0, float(x)))
+    @staticmethod
+    def nusselt_zukauskas(reynolds_gap, prandtl, prandtl_surface,
+                           coefficient_c, exponent_m, exponent_n,
+                           row_correction_factor, arrangement_correction_factor):
+        return (
+            coefficient_c
+            * reynolds_gap**exponent_m
+            * prandtl**exponent_n
+            * (prandtl / prandtl_surface)**0.25
+            * row_correction_factor
+            * arrangement_correction_factor
+        )
 
-        if x_eq <= 0.0:
-            return Q_(h_lo, "W/(m^2*K)")
+    @staticmethod
+    def curvature_correction_factor_dean(reynolds, diameter, curvature_radius, coefficient_a, exponent_b):
+        dean_number = reynolds * math.sqrt(diameter / (2.0 * curvature_radius))
+        return 1.0 + coefficient_a * dean_number**exponent_b
 
-        # Two-phase HTC with quality
-        h_tp = HTCFunctions.boiling(water, D_h, L, T_wall, qpp, x=x_eq).to("W/(m^2*K)").magnitude
+    @staticmethod
+    def nusselt_churchill_bernstein_with_curvature(reynolds, prandtl, diameter, curvature_radius, coefficient_a, exponent_b):
+        nu_base = WaterHTC.nusselt_churchill_bernstein(reynolds, prandtl)
+        factor = WaterHTC.curvature_correction_factor_dean(reynolds, diameter, curvature_radius, coefficient_a, exponent_b)
+        return nu_base * factor
 
-        # Smooth blend near onset (optional)
-        w = min(1.0, x_eq / 0.02)
-        h_eff = (1.0 - w) * h_lo + w * h_tp
-        return Q_(h_eff, "W/(m^2*K)")
+    @staticmethod
+    def gungor_winterton_boiling(h_singlephase, h_nucleate, mass_flux, heat_flux, latent_heat, vapor_quality,
+                                 liquid_density, vapor_density, liquid_viscosity, vapor_viscosity, surface_tension, diameter):
+        # Units must be consistent (Quantities OK).
+        reynolds_liquid_only = mass_flux * (1.0 - vapor_quality) * diameter / liquid_viscosity
+        boiling_number = heat_flux / (mass_flux * latent_heat)
+        x_tt = ((1.0 - vapor_quality) / vapor_quality)**0.9 \
+               * (vapor_density / liquid_density)**0.5 \
+               * (liquid_viscosity / vapor_viscosity)**0.1
+        enhancement_factor = 1.0 + 3000.0 * boiling_number**0.86 + 1.12 * x_tt**(-1.86)
+        suppression_factor = 1.0 / (1.0 + 1.15e-6 * reynolds_liquid_only**1.17)
+        return suppression_factor * h_nucleate + enhancement_factor * h_singlephase
 
+    @staticmethod
+    def _nusselt_bank_banded(reynolds_gap, prandtl, prandtl_surface,
+                             bands: List[BankBand], row_factor, arrangement_factor):
+        for b in bands:
+            if b.re_min <= reynolds_gap < b.re_max:
+                return (
+                    b.c
+                    * reynolds_gap**b.m
+                    * prandtl**b.n
+                    * (prandtl / prandtl_surface)**0.25
+                    * row_factor
+                    * arrangement_factor
+                )
+        raise ValueError(f"Re={reynolds_gap} not covered by any correlation band")
+
+    # ---------- engines ----------
+    def _h_singlephase(self, zone: Zone):
+        if zone in {"firepass", "smokepass", "economiser"}:
+            re  = self._pick(zone=zone, base="reynolds_gap")
+            pr  = self._pick(zone=zone, base="prandtl")
+            prs = self._pick(zone=zone, base="prandtl_surface")
+            bands = self._pick(zone=zone, base="zukauskas_bands")  # List[BankBand]
+            rf = self._pick(zone=zone, base="row_correction_factor")
+            af = self._pick(zone=zone, base="arrangement_correction_factor")
+            nu = self._nusselt_bank_banded(re, pr, prs, bands, rf, af)
+            k  = self._pick(zone=zone, base="thermal_conductivity")
+            d  = self._pick(zone=zone, base="characteristic_diameter")
+            return self.heat_transfer_coefficient_from_nusselt(nu, k, d)
+
+        if zone == "reversal":
+            re  = self._pick(zone=zone, base="reynolds") if hasattr(self, "reynolds_reversal") else self.reynolds_reversal
+            pr  = self._pick(zone=zone, base="prandtl")  if hasattr(self, "prandtl_reversal")  else self.prandtl_reversal
+            d_h = self._pick(zone=zone, base="diameter") if hasattr(self, "diameter_reversal") else self.diameter_reversal
+            rc  = self._pick(zone=zone, base="curvature_radius") if hasattr(self, "curvature_radius_reversal") else self.curvature_radius_reversal
+            a   = self._pick(zone=zone, base="coefficient_a")
+            b   = self._pick(zone=zone, base="exponent_b")
+            nu  = self.nusselt_churchill_bernstein_with_curvature(re, pr, d_h, rc, a, b)
+            k   = self._pick(zone=zone, base="thermal_conductivity") if hasattr(self, "thermal_conductivity_reversal") else self.thermal_conductivity_reversal
+            d_c = self._pick(zone=zone, base="characteristic_diameter") if hasattr(self, "characteristic_diameter_reversal") else self.characteristic_diameter_reversal
+            return self.heat_transfer_coefficient_from_nusselt(nu, k, d_c)
+
+        raise ValueError(f"Unknown zone: {zone}")
+
+    def _h_twophase(self, zone: Zone):
+        h_sp = self._h_singlephase(zone)
+        h_nb = self._pick(zone=zone, base="h_nucleate")
+        G    = self._pick(zone=zone, base="mass_flux")
+        qpp  = self._pick(zone=zone, base="heat_flux")
+        h_lv = self._pick(zone=zone, base="latent_heat")
+        x    = self._pick(zone=zone, base="vapor_quality")
+        rho_l= self._pick(zone=zone, base="liquid_density")
+        rho_v= self._pick(zone=zone, base="vapor_density")
+        mu_l = self._pick(zone=zone, base="liquid_viscosity")
+        mu_v = self._pick(zone=zone, base="vapor_viscosity")
+        sigma= self._pick(zone=zone, base="surface_tension")
+        d    = self._pick(zone=zone, base="diameter")
+        return self.gungor_winterton_boiling(h_sp, h_nb, G, qpp, h_lv, x, rho_l, rho_v, mu_l, mu_v, sigma, d)

@@ -234,19 +234,19 @@ class GasStream:
 
         @property
         def density(self) -> Q_:
-            return self.gas_props.density(self.temperature, self.pressure, self.composition)
+            return self.gas_props.density(self)
         
         @property
         def specific_heat(self) -> Q_:
-            return self.gas_props.cp(self.temperature, self.pressure, self.composition)
+            return self.gas_props.specific_heat(self)
         
         @property
         def dynamic_viscosity(self) -> Q_:
-            return self.gas_props.viscosity(self.temperature, self.pressure, self.composition)
+            return self.gas_props.viscosity(self)
         
         @property
         def thermal_conductivity(self) -> Q_:
-            return self.gas_props.thermal_conductivity(self.temperature, self.pressure, self.composition)
+            return self.gas_props.thermal_conductivity(self)
         
         @property
         def mass_flux(self) -> Q_:
@@ -293,11 +293,6 @@ class GasStream:
         def friction_factor(self) -> float:
             f = ( -1.8*log10( (self.stage.hot_side.rel_roughness.magnitude/3.7)**1.11 + 6.9/self.reynolds_number.magnitude ) )**-2
             return f
-        
-from dataclasses import dataclass
-from typing import Dict, Literal, Tuple
-
-PhaseT = Literal["subcooled_liquid", "saturated_mixture", "superheated_vapor"]
 
 @dataclass
 class WaterStream:
@@ -309,88 +304,41 @@ class WaterStream:
     stage: FirePass | SmokePass | Reversal
     water_props: WaterProps
 
-    def _state(self, P: Q_, h: Q_) -> Tuple[PhaseT, Q_, Q_]:
-        Tsat = self.water_props.Tsat(P)
-        h_l  = self.water_props.h_l_sat(P)
-        h_v  = self.water_props.h_v_sat(P)
-        eps  = Q_(1.0, "J/kg")
-
-        if h <= h_l - eps:
-            return "subcooled_liquid", Q_(0.0, "dimensionless"), self.water_props.T_ph(P, h)
-        if h >= h_v + eps:
-            return "superheated_vapor", Q_(1.0, "dimensionless"), self.water_props.T_ph(P, h)
-        x = (h - h_l) / (h_v - h_l)
-        x = Q_(max(0.0, min(1.0, x.magnitude)), "dimensionless")
-        return "saturated_mixture", x, Tsat
-
-    # ---- identifiers from (P,h) ----
-    @property
-    def saturation_temperature(self) -> Q_:
-        return self.water_props.Tsat(self.pressure)
-
-    @property
-    def phase(self) -> PhaseT:
-        ph, _, _ = self._state(self.pressure, self.enthalpy)
-        return ph
-
     @property
     def quality(self) -> Q_:
-        _, x, _ = self._state(self.pressure, self.enthalpy)
-        return x
+        return self.water_props.quality(self)
+
+    @property
+    def saturation_temperature(self) -> Q_:
+        return self.water_props.saturation_temperature(self)
 
     @property
     def temperature(self) -> Q_:
-        _, _, T = self._state(self.pressure, self.enthalpy)
-        return T
+        return self.water_props.temperature(self)
 
-    # ---- properties use only (P,h) ----
     @property
     def density(self) -> Q_:
-        P, h = self.pressure, self.enthalpy
-        ph, x, T = self._state(P, h)
-        if ph == "subcooled_liquid":  return self.water_props.rho_l(P, T)
-        if ph == "superheated_vapor": return self.water_props.rho_v(P, T)
-        rho_l = self.water_props.rho_l_sat(P); rho_v = self.water_props.rho_v_sat(P)
-        v_mix = (1 - x.magnitude)/rho_l.magnitude + x.magnitude/rho_v.magnitude
-        return Q_(1.0 / v_mix, "kg/m^3")
+        return self.water_props.density(self)
 
     @property
     def specific_heat(self) -> Q_:
-        P, h = self.pressure, self.enthalpy
-        ph, x, T = self._state(P, h)
-        if ph == "subcooled_liquid":  return self.water_props.cp_l(P, T)
-        if ph == "superheated_vapor": return self.water_props.cp_v(P, T)
-        cp_l = self.water_props.cp_l_sat(P); cp_v = self.water_props.cp_v_sat(P)
-        return Q_(cp_l.magnitude*(1-x.magnitude) + cp_v.magnitude*x.magnitude, "J/(kg*K)")
+        return self.water_props.specific_heat(self)
 
     @property
     def thermal_conductivity(self) -> Q_:
-        P, h = self.pressure, self.enthalpy
-        ph, x, T = self._state(P, h)
-        if ph == "subcooled_liquid":  return self.water_props.k_l(P, T)
-        if ph == "superheated_vapor": return self.water_props.k_v(P, T)
-        k_l = self.water_props.k_l_sat(P); k_v = self.water_props.k_v_sat(P)
-        return Q_(k_l.magnitude*(1-x.magnitude) + k_v.magnitude*x.magnitude, "W/(m*K)")
+        return self.water_props.thermal_conductivity(self)
 
     @property
     def dynamic_viscosity(self) -> Q_:
-        P, h = self.pressure, self.enthalpy
-        ph, x, T = self._state(P, h)
-        if ph == "subcooled_liquid":  return self.water_props.mu_l(P, T)
-        if ph == "superheated_vapor": return self.water_props.mu_v(P, T)
-        mu_l = self.water_props.mu_l_sat(P); mu_v = self.water_props.mu_v_sat(P)
-        return Q_(mu_l.magnitude*(1-x.magnitude) + mu_v.magnitude*x.magnitude, "Pa*s")
+        return self.water_props.dynamic_viscosity(self)
 
     @property
     def surface_tension(self) -> Q_:
-        P, h = self.pressure, self.enthalpy
-        ph, _, T = self._state(P, h)
-        T_use = self.water_props.Tsat(P) if ph == "saturated_mixture" else T
-        return self.water_props.sigma(P, T_use)
+        return self.water_props.surface_tension(self)
 
     @property
     def latent_heat_of_vaporization(self) -> Q_:
-        return self.water_props.h_fg(self.pressure)
+        return self.water_props.latent_heat_of_vaporization(self)
 
     @property
     def prandtl_number(self) -> Q_:
@@ -403,3 +351,8 @@ class WaterStream:
     @property
     def reynolds_number(self) -> Q_:
         return self.density * self.velocity * self.stage.cold_side.hydraulic_diameter / self.dynamic_viscosity
+
+    @property
+    def reynolds_gap(self) -> Q_:
+        gap_velocity = self.velocity * self.stage.hot_side.pitch / (self.stage.hot_side.pitch - self.stage.hot_side.outer_diameter)
+        return self.density * gap_velocity * self.stage.hot_side.outer_diameter / self.dynamic_viscosity

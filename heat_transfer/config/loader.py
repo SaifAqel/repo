@@ -171,7 +171,7 @@ class ConfigLoader:
             composition=composition,
             spectroscopic_data=spectro,
             stage= None,
-            gas_props=GasProps(ct.Solution("heat_transfer/config/flue_cantera.yaml"))
+            gas_props=GasProps
         )
 
     @classmethod

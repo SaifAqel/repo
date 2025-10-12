@@ -10,7 +10,7 @@ from common.units import Q_, ureg
 from heat_transfer.config.models import (
     FirePass, SmokePass, Reversal, BankGeometry, GasStream, WaterStream
 )
-from heat_transfer.functions.htc_water import HTCFunctions
+from heat_transfer.functions.htc_water import WaterHTC
 
 
 def _areas(stage) -> tuple[Q_, Q_, Q_, Q_]:
@@ -46,18 +46,19 @@ def _overall_Q_for_T(Tg, Pg, Pw, hw, stage, gas, water) -> tuple[Q_, Q_, Q_]:
     gas.pressure    = PgQ
     water.enthalpy  = hwQ
 
-    Tw_bulk = water.water_props.T_ph(PwQ, hwQ)
+    Tw_bulk = water.water_props.temperature(water)
 
     h_g = gas.convective_coefficient.to("W/(m^2*K)")
 
     def F(TwiK: float) -> float:
         Twi = Q_(TwiK, "K")
         h_r = gas.radiation_coefficient(Twi).to("W/(m^2*K)")
-        qph = 2 * pi * ri * (h_g + h_r) * (TgQ - Twi)                # W/m
-        Two = Twi - qph * log(ro/ri) / (2 * pi * kw)                 # K
+        qph = 2 * pi * ri * (h_g + h_r) * (TgQ - Twi)
+        Two = Twi - qph * log(ro/ri) / (2 * pi * kw)
         qpp = (qph / (2 * pi * ro)).to("W/m^2")
-        h_w = HTCFunctions.shell(water, Dh_shell, L, Two, qpp)       # W/m^2-K
-        qpc = 2 * pi * ro * h_w * (Two - Tw_bulk)                    # W/m
+        h_w = WaterHTC(stage, water, gas).compute_htc()
+
+        qpc = 2 * pi * ro * h_w * (Two - Tw_bulk)
         if isinstance(stage.hot_side, BankGeometry):
             qpc *= stage.hot_side.tubes_number.to("").magnitude
         return (qph - qpc).to("W/m").magnitude
