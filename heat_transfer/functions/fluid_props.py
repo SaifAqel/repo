@@ -2,174 +2,129 @@ import cantera as ct
 from common.units import ureg, Q_
 from iapws import IAPWS97
 from scipy.optimize import brentq
+from typing import Optional
+from heat_transfer.config.models import WaterStream, GasStream
 
 class GasProps:
-    def __init__(self, gas: ct.Solution):
-        self.gas = gas
-
-    def _set_state(self, T, P, X):
-        T_val = Q_(T).to("K").magnitude if not isinstance(T, (int, float)) else T
-        P_val = Q_(P).to("Pa").magnitude if not isinstance(P, (int, float)) else P
-        X_val = {k: v.magnitude for k, v in X.items()}
-        self.gas.TPX = T_val, P_val, X_val
-
-    def thermal_conductivity(self, T, P, X):
-        self._set_state(T, P, X)
-        return Q_(self.gas.thermal_conductivity, "W/(m*K)")
-
-    def viscosity(self, T, P, X):
-        self._set_state(T, P, X)
-        return Q_(self.gas.viscosity, "Pa*s")
-
-    def density(self, T, P, X):
-        self._set_state(T, P, X)
-        return Q_(self.gas.density, "kg/m^3")
-
-    def enthalpy(self, T, P, X):
-        self._set_state(T, P, X)
-        return Q_(self.gas.enthalpy_mass, "J/kg")
-
-    def cp(self, T, P, X):
-        self._set_state(T, P, X)
-        return Q_(self.gas.cp_mass, "J/(kg*K)")
-
-class WaterProps:
-    @staticmethod
-    def Tsat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=0)
-        return Q_(w.T, "kelvin")
+   
+    _base_sol = None
 
     @staticmethod
-    def rho_l(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.rho, "kg/m^3")
+    def _set_state(gas: GasStream):
+        if GasProps._base_sol is None:
+            GasProps._base_sol = ct.Solution("heat_transfer/config/flue_cantera.yaml")
+        sol = GasProps._base_sol.clone()
+        T = gas.temperature.to("K").magnitude 
+        P = gas.pressure.to("Pa").magnitude
+        X = {k: v.magnitude for k, v in gas.composition.items()}
+        sol.TPX = T, P, X
+        return sol
 
     @staticmethod
-    def rho_v(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.rho, "kg/m^3")
-
-    @staticmethod
-    def rho_l_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=0)
-        return Q_(w.rho, "kg/m^3")
-
-    @staticmethod
-    def rho_v_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=1)
-        return Q_(w.rho, "kg/m^3")
-
-    @staticmethod
-    def mu_l(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.mu, "Pa*s")
-
-    @staticmethod
-    def mu_v(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.mu, "Pa*s")
-
-    @staticmethod
-    def mu_l_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=0)
-        return Q_(w.mu, "Pa*s")
-
-    @staticmethod
-    def mu_v_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=1)
-        return Q_(w.mu, "Pa*s")
-
-    @staticmethod
-    def k_l(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.k, "W/(m*K)")
-
-    @staticmethod
-    def k_v(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.k, "W/(m*K)")
-
-    @staticmethod
-    def k_l_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=0)
-        return Q_(w.k, "W/(m*K)")
-
-    @staticmethod
-    def k_v_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=1)
-        return Q_(w.k, "W/(m*K)")
-
-    @staticmethod
-    def cp_l(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.cp * 1e3, "J/(kg*K)")
-
-    @staticmethod
-    def cp_v(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.cp * 1e3, "J/(kg*K)")
-
-    @staticmethod
-    def cp_l_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=0)
-        return Q_(w.cp * 1e3, "J/(kg*K)")
-
-    @staticmethod
-    def cp_v_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=1)
-        return Q_(w.cp * 1e3, "J/(kg*K)")
-
-    @staticmethod
-    def sigma(P: Q_, T: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.sigma, "N/m")
-
-    @staticmethod
-    def sigma_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=0)
-        return Q_(w.sigma, "N/m")
-
-    @staticmethod
-    def h_l_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=0)
-        return Q_(w.h * 1e3, "J/kg")
-
-    @staticmethod
-    def h_v_sat(P: Q_) -> Q_:
-        w = IAPWS97(P=P.to("megapascal").magnitude, x=1)
-        return Q_(w.h * 1e3, "J/kg")
-
-    @staticmethod
-    def h_fg(P: Q_) -> Q_:
-        return WaterProps.h_v_sat(P) - WaterProps.h_l_sat(P)
-
-    @staticmethod
-    def h_single(P: Q_, T: Q_) -> Q_:
-        # single-phase specific enthalpy at P and T
-        w = IAPWS97(P=P.to("megapascal").magnitude, T=T.to("kelvin").magnitude)
-        return Q_(w.h * 1e3, "J/kg")
+    def thermal_conductivity(gas: GasStream):
+        sol = GasProps._set_state(gas)
+        return Q_(sol.thermal_conductivity, "W/(m*K)")
     
     @staticmethod
-    def T_ph(P: Q_, h: Q_) -> Q_:
-        """Return temperature for given pressure and specific enthalpy."""
-        P_MPa = P.to("megapascal").magnitude
-        h_target = h.to("J/kg").magnitude
+    def viscosity(gas: GasStream):
+        sol = GasProps._set_state(gas)
+        return Q_(sol.viscosity, "Pa*s")
+    
+    @staticmethod
+    def density(gas: GasStream):
+        sol = GasProps._set_state(gas)
+        return Q_(sol.density, "kg/m^3")
+    
+    @staticmethod
+    def enthalpy(gas: GasStream):
+        sol = GasProps._set_state(gas)
+        return Q_(sol.enthalpy_mass, "J/kg")
+    
+    @staticmethod
+    def specific_heat(gas: GasStream):
+        sol = GasProps._set_state(gas)
+        return Q_(sol.cp_mass, "J/(kg*K)")
 
-        # temperature bounds in kelvin
-        T_min = 273.16
-        T_max = 2000.0
+class WaterProps:
 
-        def f(TK: float) -> float:
-            w = IAPWS97(P=P_MPa, T=TK)
-            return w.h * 1e3 - h_target  # J/kg
+    @staticmethod
+    def quality(water: WaterStream) -> Q_:
+        P = water.pressure.to("megapascal").magnitude
+        h = water.enthalpy.to("kJ/kg").magnitude
+        h_l = IAPWS97(P=P, x=0).h
+        h_v = IAPWS97(P=P, x=1).h
+        x = (h - h_l) / (h_v - h_l)
+        return Q_(x, "dimensionless")
 
-        try:
-            T_sol = brentq(f, T_min, T_max)
-        except ValueError:
-            # fallback for subcooled or supercritical cases
-            if f(T_min) > 0:
-                T_sol = T_min
-            else:
-                T_sol = T_max
+    @staticmethod
+    def _state(water: WaterStream) -> IAPWS97:
+        P = water.pressure.to("megapascal").magnitude
+        h = water.enthalpy.to("kJ/kg").magnitude
+        x = WaterProps.quality(water).magnitude
+        if 0 <= x <= 1:
+            return IAPWS97(P=P, x=x)
+        else:
+            return IAPWS97(P=P, h=h)
 
-        return Q_(T_sol, "kelvin")
+    @staticmethod
+    def temperature(water: WaterStream) -> Q_:
+        return Q_(WaterProps._state(water).T, "kelvin")
+
+    @staticmethod
+    def density(water: WaterStream) -> Q_:
+        P = water.pressure.to("megapascal").magnitude
+        x = WaterProps.quality(water).magnitude
+        if 0.0 < x < 1.0:
+            rho_l = IAPWS97(P=P, x=0).rho
+            rho_v = IAPWS97(P=P, x=1).rho
+            rho_mix = 1.0 / ((x / rho_v) + ((1.0 - x) / rho_l))
+            return Q_(rho_mix, "kg/m^3")
+        return Q_(WaterProps._state(water).rho, "kg/m^3")
+ 
+    @staticmethod
+    def dynamic_viscosity(water: WaterStream) -> Q_:
+        x = WaterProps.quality(water).magnitude
+        if 0.0 < x < 1.0:
+            raise ValueError("Viscosity undefined for two-phase mixture without a mixing rule.")
+        return Q_(WaterProps._state(water).mu, "kg/m^3")
+
+    @staticmethod
+    def thermal_conductivity(water: WaterStream) -> Q_:
+        x = WaterProps.quality(water).magnitude
+        if 0.0 < x < 1.0:
+            raise ValueError("Thermal conductivity undefined for two-phase mixture without a mixing rule.")
+        return Q_(WaterProps._state(water).k, "W/(m*K)")
+
+    @staticmethod
+    def specific_heat_capacity_at_constant_pressure(water: WaterStream) -> Q_:
+        x = WaterProps.quality(water).magnitude
+        if 0.0 < x < 1.0:
+            raise ValueError("cp undefined for two-phase mixture without a mixing rule.")
+        return Q_(WaterProps._state(water).cp * 1e3, "J/(kg*K)")
+
+    @staticmethod
+    def surface_tension(water: WaterStream) -> Q_:
+        P = water.pressure.to("megapascal").magnitude
+        return Q_(IAPWS97(P=P, x=0).sigma, "N/m")
+
+    @staticmethod
+    def specific_enthalpy(water: WaterStream) -> Q_:
+        w = WaterProps._state(water)
+        return Q_(w.h * 1e3, "J/kg")
+
+    @staticmethod
+    def saturation_temperature(water: WaterStream) -> Q_:
+        P = water.pressure.to("megapascal").magnitude
+        return Q_(IAPWS97(P=P, x=0).T, "kelvin")
+
+    @staticmethod
+    def latent_heat_of_vaporization(water: WaterStream) -> Q_:
+        P = water.pressure.to("megapascal").magnitude
+        wl = IAPWS97(P=P, x=0.0)
+        wg = IAPWS97(P=P, x=1.0)
+        return Q_((wg.h - wl.h) * 1e3, "J/kg")
+
+
+
+
+
