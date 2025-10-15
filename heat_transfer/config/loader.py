@@ -88,6 +88,7 @@ class ConfigLoader:
         return ReversalGeometry(
             inner_length=cls._qty(node["inner_length"]),
             inner_diameter=cls._qty(node["inner_diameter"]),
+            curvature_radius=cls._qty(node["curvature_radius"]),
             nozzles=cls._build_nozzles(node["nozzles"]),
             wall=cls._build_wall(node["wall"])
 

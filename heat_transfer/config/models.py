@@ -67,6 +67,7 @@ class TubeGeometry:
 class ReversalGeometry:
     inner_length: Q_
     inner_diameter: Q_
+    curvature_radius: Q_
     nozzles: Nozzles
     wall: Wall
 
@@ -307,10 +308,18 @@ class WaterStream:
     @property
     def quality(self) -> Q_:
         return self.water_props.quality(self)
-
+    
+    @property
+    def molecular_weight(self) -> Q_:
+        return Q_(18.0, "kg/kmol")
+ 
     @property
     def saturation_temperature(self) -> Q_:
         return self.water_props.saturation_temperature(self)
+    
+    @property
+    def liquid_saturation_enthalpy(self) -> Q_:
+        return self.water_props.saturation_enthalpy_liquid(self)
 
     @property
     def temperature(self) -> Q_:

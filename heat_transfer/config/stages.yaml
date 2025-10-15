@@ -39,6 +39,7 @@ stages:
     hot_side:
       inner_length: { value: 0.8, unit: m }
       inner_diameter: { value: 1.6, unit: m }
+      curvature_radius: { value: 0.8, unit: m }
       nozzles:
         inlet:
           k: { value: 1, unit: dimensionless }
@@ -119,6 +120,7 @@ stages:
     hot_side:
       inner_length: { value: 0.8, unit: m }
       inner_diameter: { value: 1.6, unit: m }
+      curvature_radius: { value: 0.8, unit: m }
       nozzles:
         inlet:
           k: { value: 1, unit: dimensionless }

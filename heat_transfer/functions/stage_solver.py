@@ -56,7 +56,7 @@ def _overall_Q_for_T(Tg, Pg, Pw, hw, stage, gas, water) -> tuple[Q_, Q_, Q_]:
         qph = 2 * pi * ri * (h_g + h_r) * (TgQ - Twi)
         Two = Twi - qph * log(ro/ri) / (2 * pi * kw)
         qpp = (qph / (2 * pi * ro)).to("W/m^2")
-        h_w = WaterHTC(stage, water, gas).compute_htc()
+        h_w = WaterHTC(stage, water, gas).calc_htc()
 
         qpc = 2 * pi * ro * h_w * (Two - Tw_bulk)
         if isinstance(stage.hot_side, BankGeometry):

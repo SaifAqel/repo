@@ -121,6 +121,12 @@ class WaterProps:
         wg = IAPWS97(P=P, x=1.0)
         return Q_((wg.h - wl.h) * 1e3, "J/kg")
 
+    @staticmethod
+    def saturation_enthalpy_liquid(water) -> tuple[Q_, Q_]:
+        P = water.pressure.to("megapascal").magnitude
+        h_l = Q_(IAPWS97(P=P, x=0).h * 1e3, "J/kg")
+        return h_l
+
 
 
 
