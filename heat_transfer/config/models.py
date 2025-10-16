@@ -51,9 +51,12 @@ class TubeGeometry:
         return self.wall.surfaces.inner.roughness / self.inner_diameter
     
     @property
-    def HX_area(self) -> Q_:
-        p = pi * self.inner_diameter
-        return p * self.inner_length
+    def inner_perimeter(self) -> Q_:
+        return pi * self.inner_diameter
+    
+    @property
+    def outer_perimeter(self) -> Q_:
+        return pi * self.outer_diameter
     
     @property
     def path_length(self) -> Q_:
@@ -84,9 +87,12 @@ class ReversalGeometry:
         return self.wall.surfaces.inner.roughness / self.inner_diameter
     
     @property
-    def HX_area(self) -> Q_:
-        p = pi * self.inner_diameter
-        return p * self.inner_length
+    def inner_perimeter(self) -> Q_:
+        return pi * self.inner_diameter
+    
+    @property
+    def outer_perimeter(self) -> Q_:
+        return pi * self.outer_diameter
     
     @property
     def path_length(self) -> Q_:
@@ -114,7 +120,16 @@ class BankGeometry:
         return self.wall.surfaces.inner.roughness / self.inner_diameter
     
     @property
-    def outer_diameter(self): return self.inner_diameter + 2*self.wall.thickness
+    def outer_diameter(self) -> Q_: 
+        return self.inner_diameter + 2*self.wall.thickness
+    
+    @property
+    def inner_perimeter(self) -> Q_:
+        return pi * self.inner_diameter * self.tubes_number
+    
+    @property
+    def outer_perimeter(self) -> Q_:
+        return pi * self.outer_diameter * self.tubes_number
 
     @property
     def hydraulic_diameter(self) -> Q_:
