@@ -252,7 +252,16 @@ class GasStream:
         stage: FirePass | SmokePass | Reversal
         gas_props: GasProps
 
-        wall_temperature: Q_ | None = None
+        wall_temperature: Q_ | None = None  # Twi
+
+        def update_walls(self, qprime):
+            Twi = self.temperature - qprime / self.htc
+            Two = Twi - (qprime * self.stage.hot_side.wall.thickness) / self.stage.hot_side.wall.conductivity
+            return {"Twi": Twi, "Two": Two}
+
+        @property
+        def htc(self) -> Q_:
+            return self.radiation_coefficient + self.film_convective_coefficient
 
         @property
         def density(self) -> Q_:
@@ -362,7 +371,7 @@ class WaterStream:
     drum: Drum
     water_props: WaterProps
 
-    wall_temperature: Q_ | None = None
+    wall_temperature: Q_ | None = None  # Two
 
     @property
     def quality(self) -> Q_:

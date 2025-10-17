@@ -35,4 +35,4 @@ class HeatRate:
         )
     
     def heat_rate_per_length(self) -> Q_:
-        return ( self.gas.temperature - self.water.temperature ) / self.total_resistance_per_length
+        return ( self.gas.temperature - self.water.temperature ) / self.total_resistance_per_length()
