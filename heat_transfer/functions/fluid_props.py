@@ -8,39 +8,39 @@ class GasProps:
     _base_sol = None
 
     @staticmethod
-    def _set_state(gas):
+    def _set_state(gas, film_temperature: Q_ | None):
         if GasProps._base_sol is None:
             GasProps._base_sol = ct.Solution("heat_transfer/config/flue_cantera.yaml")
         sol = GasProps._base_sol
-        T = gas.temperature.to("K").magnitude 
+        T = (film_temperature or gas.temperature).to("K").magnitude
         P = gas.pressure.to("Pa").magnitude
         X = {k: v.magnitude for k, v in gas.composition.items()}
         sol.TPX = T, P, X
         return sol
 
     @staticmethod
-    def thermal_conductivity(gas):
-        sol = GasProps._set_state(gas)
+    def thermal_conductivity(gas, film_temperature: Q_ | None = None):
+        sol = GasProps._set_state(gas, T_f)
         return Q_(sol.thermal_conductivity, "W/(m*K)")
     
     @staticmethod
-    def viscosity(gas):
-        sol = GasProps._set_state(gas)
+    def viscosity(gas, film_temperature: Q_ | None = None):
+        sol = GasProps._set_state(gas, T_f)
         return Q_(sol.viscosity, "Pa*s")
     
     @staticmethod
-    def density(gas):
-        sol = GasProps._set_state(gas)
+    def density(gas, film_temperature: Q_ | None = None):
+        sol = GasProps._set_state(gas, T_f)
         return Q_(sol.density, "kg/m^3")
     
     @staticmethod
-    def enthalpy(gas):
-        sol = GasProps._set_state(gas)
+    def enthalpy(gas, film_temperature: Q_ | None = None):
+        sol = GasProps._set_state(gas, T_f)
         return Q_(sol.enthalpy_mass, "J/kg")
     
     @staticmethod
-    def specific_heat(gas):
-        sol = GasProps._set_state(gas)
+    def specific_heat(gas, film_temperature: Q_ | None = None):
+        sol = GasProps._set_state(gas, T_f)
         return Q_(sol.cp_mass, "J/(kg*K)")
 
 class WaterProps:
@@ -67,11 +67,11 @@ class WaterProps:
     @staticmethod
     def temperature(water) -> Q_:
         return Q_(WaterProps._state(water).T, "kelvin")
-
+    
     @staticmethod
-    def density(water) -> Q_:
+    def density(water, x: Q_ | None = None) -> Q_:
         P = water.pressure.to("megapascal").magnitude
-        x = water.quality
+        x = x or water.quality
         if 0.0 < x < 1.0:
             rho_l = IAPWS97(P=P, x=0).rho
             rho_v = IAPWS97(P=P, x=1).rho
@@ -80,8 +80,8 @@ class WaterProps:
         return Q_(WaterProps._state(water).rho, "kg/m^3")
  
     @staticmethod
-    def dynamic_viscosity(water) -> Q_:
-        x = water.quality
+    def dynamic_viscosity(water, x: Q_ | None = None) -> Q_:
+        x = x or water.quality
         if 0.0 < x < 1.0:
             raise ValueError("Viscosity undefined for two-phase mixture without a mixing rule.")
         return Q_(WaterProps._state(water).mu, "kg/m/s")

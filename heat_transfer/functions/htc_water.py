@@ -77,4 +77,4 @@ class WaterHTC:
             return self.htc_conv
 
         else:
-            return self.htc_conv + self.htc_nb
+            return ( self.water.S_factor * self.htc_conv ) + ( self.water.F_factor * self.htc_nb )
