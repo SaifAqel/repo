@@ -20,27 +20,27 @@ class GasProps:
 
     @staticmethod
     def thermal_conductivity(gas, film_temperature: Q_ | None = None):
-        sol = GasProps._set_state(gas, T_f)
+        sol = GasProps._set_state(gas, film_temperature)
         return Q_(sol.thermal_conductivity, "W/(m*K)")
     
     @staticmethod
     def viscosity(gas, film_temperature: Q_ | None = None):
-        sol = GasProps._set_state(gas, T_f)
+        sol = GasProps._set_state(gas, film_temperature)
         return Q_(sol.viscosity, "Pa*s")
     
     @staticmethod
     def density(gas, film_temperature: Q_ | None = None):
-        sol = GasProps._set_state(gas, T_f)
+        sol = GasProps._set_state(gas, film_temperature)
         return Q_(sol.density, "kg/m^3")
     
     @staticmethod
     def enthalpy(gas, film_temperature: Q_ | None = None):
-        sol = GasProps._set_state(gas, T_f)
+        sol = GasProps._set_state(gas, film_temperature)
         return Q_(sol.enthalpy_mass, "J/kg")
     
     @staticmethod
     def specific_heat(gas, film_temperature: Q_ | None = None):
-        sol = GasProps._set_state(gas, T_f)
+        sol = GasProps._set_state(gas, film_temperature)
         return Q_(sol.cp_mass, "J/(kg*K)")
 
 class WaterProps:
