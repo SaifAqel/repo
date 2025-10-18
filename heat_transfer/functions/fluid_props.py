@@ -1,23 +1,18 @@
+from common.units import Q_, Converter
 import cantera as ct
-from common.units import Q_
 from iapws import IAPWS97
-from typing import TYPE_CHECKING
 
 class GasProps:
-   
-    _base_sol = None
-
+    ######################### Function #########################
     @staticmethod
     def _set_state(gas, film_temperature: Q_ | None):
-        if GasProps._base_sol is None:
-            GasProps._base_sol = ct.Solution("heat_transfer/config/flue_cantera.yaml")
-        sol = GasProps._base_sol
+        sol = ct.Solution("heat_transfer/config/flue_cantera.yaml")
         T = (film_temperature or gas.temperature).to("K").magnitude
         P = gas.pressure.to("Pa").magnitude
         X = {k: v.magnitude for k, v in gas.composition.items()}
         sol.TPX = T, P, X
         return sol
-
+    ######################### Properties #########################
     @staticmethod
     def thermal_conductivity(gas, film_temperature: Q_ | None = None):
         sol = GasProps._set_state(gas, film_temperature)
@@ -43,91 +38,87 @@ class GasProps:
         sol = GasProps._set_state(gas, film_temperature)
         return Q_(sol.cp_mass, "J/(kg*K)")
 
+
 class WaterProps:
+    ######################### Functions ######################### 
+    @staticmethod
+    def sat_liq(water) -> IAPWS97:
+        P = Converter._MPa(water.pressure).magnitude
+        return IAPWS97(P=P, x=0.0)
 
     @staticmethod
-    def quality(water) -> Q_:
-        P = water.pressure.to("megapascal").magnitude
-        h = water.enthalpy.to("kJ/kg").magnitude
-        h_l = IAPWS97(P=P, x=0).h
-        h_v = IAPWS97(P=P, x=1).h
-        x = (h - h_l) / (h_v - h_l)
-        return Q_(x, "dimensionless")
+    def sat_vap(water) -> IAPWS97:
+        P = Converter._MPa(water.pressure).magnitude
+        return IAPWS97(P=P, x=1.0)
 
     @staticmethod
     def _state(water) -> IAPWS97:
-        P = water.pressure.to("megapascal").magnitude
-        h = water.enthalpy.to("kJ/kg").magnitude
-        x = water.quality
-        if 0 <= x <= 1:
-            return IAPWS97(P=P, x=x)
-        else:
-            return IAPWS97(P=P, h=h)
+        P = Converter._MPa(water.pressure).magnitude
+        T = getattr(water, "temperature", None)
+        h = getattr(water, "enthalpy", None)
+        x = getattr(water, "quality", None)
+
+        if x is not None:
+            return IAPWS97(P=P, x=Converter._dim(x).magnitude)
+        if T is not None:
+            return IAPWS97(P=P, T=Converter._K(T).magnitude)
+        if h is not None:
+            return IAPWS97(P=P, h=Converter._kJkg(h).magnitude)
+        raise ValueError("Provide one of: temperature, enthalpy, or quality.")
+
+    ######################### Saturation Properties #########################
+    @staticmethod
+    def saturation_temperature(water) -> Q_:
+        return Q_(WaterProps.sat_liq(water).T, "K")
 
     @staticmethod
-    def temperature(water) -> Q_:
-        return Q_(WaterProps._state(water).T, "kelvin")
-    
-    @staticmethod
-    def density(water, x: Q_ | None = None) -> Q_:
-        P = water.pressure.to("megapascal").magnitude
-        x = x or water.quality
-        if 0.0 < x < 1.0:
-            rho_l = IAPWS97(P=P, x=0).rho
-            rho_v = IAPWS97(P=P, x=1).rho
-            rho_mix = 1.0 / ((x / rho_v) + ((1.0 - x) / rho_l))
-            return Q_(rho_mix, "kg/m^3")
-        return Q_(WaterProps._state(water).rho, "kg/m^3")
- 
-    @staticmethod
-    def dynamic_viscosity(water, x: Q_ | None = None) -> Q_:
-        x = x or water.quality
-        if 0.0 < x < 1.0:
-            raise ValueError("Viscosity undefined for two-phase mixture without a mixing rule.")
-        return Q_(WaterProps._state(water).mu, "kg/m/s")
+    def saturation_enthalpy_liquid(water) -> Q_:
+        return Q_(WaterProps.sat_liq(water).h, "kJ/kg")
 
     @staticmethod
-    def thermal_conductivity(water) -> Q_:
-        x = water.quality
-        if 0.0 < x < 1.0:
-            raise ValueError("Thermal conductivity undefined for two-phase mixture without a mixing rule.")
-        return Q_(WaterProps._state(water).k, "W/(m*K)")
-
-    @staticmethod
-    def specific_heat(water) -> Q_:
-        x = water.quality
-        if 0.0 < x < 1.0:
-            raise ValueError("cp undefined for two-phase mixture without a mixing rule.")
-        return Q_(WaterProps._state(water).cp * 1e3, "J/(kg*K)")
+    def latent_heat(water) -> Q_:
+        s_l = WaterProps.sat_liq(water)
+        s_v = WaterProps.sat_vap(water)
+        return Q_(s_v.h - s_l.h, "kJ/kg")
 
     @staticmethod
     def surface_tension(water) -> Q_:
-        P = water.pressure.to("megapascal").magnitude
-        return Q_(IAPWS97(P=P, x=0).sigma, "N/m")
+        s = WaterProps.sat_liq(water)
+        return Q_(s.sigma, "N/m")
+
+    ######################### Properties at specified state #########################
+    @staticmethod
+    def temperature(water) -> Q_:
+        return Q_(WaterProps._state(water).T, "K")
 
     @staticmethod
-    def specific_enthalpy(water) -> Q_:
-        return Q_(WaterProps._state(water).h * 1e3, "J/kg")
+    def density(water) -> Q_:
+        return Q_(WaterProps._state(water).rho, "kg/m^3")
 
     @staticmethod
-    def saturation_temperature(water) -> Q_:
-        P = water.pressure.to("megapascal").magnitude
-        return Q_(IAPWS97(P=P, x=0).T, "kelvin")
+    def dynamic_viscosity(water) -> Q_:
+        return Q_(WaterProps._state(water).mu, "Pa*s")
 
     @staticmethod
-    def latent_heat_of_vaporization(water) -> Q_:
-        P = water.pressure.to("megapascal").magnitude
-        wl = IAPWS97(P=P, x=0.0)
-        wg = IAPWS97(P=P, x=1.0)
-        return Q_((wg.h - wl.h) * 1e3, "J/kg")
+    def thermal_conductivity(water) -> Q_:
+        return Q_(WaterProps._state(water).k, "W/m/K")
 
     @staticmethod
-    def saturation_enthalpy_liquid(water) -> tuple[Q_, Q_]:
-        P = water.pressure.to("megapascal").magnitude
-        h_l = Q_(IAPWS97(P=P, x=0).h * 1e3, "J/kg")
-        return h_l
+    def specific_heat_cp(water) -> Q_:
+        return Q_(WaterProps._state(water).cp, "kJ/kg/K")
+    
+    @staticmethod
+    def enthalpy(water) -> Q_:
+        return Q_(WaterProps._state(water).h, "kJ/kg")
 
 
-
-
-
+    ######################### Utilities #########################
+    @staticmethod
+    def quality_from_h(water) -> Q_:
+        h = Converter._kJkg(water.enthalpy).magnitude
+        h_f = WaterProps.sat_liq(water).h
+        h_g = WaterProps.sat_vap(water).h
+        x = (h - h_f) / (h_g - h_f)
+        if 0 < x < 1:
+            return Q_(x, "dimensionless")
+        return None

@@ -3,6 +3,7 @@ from heat_transfer.functions.heat_rate import HeatRate
 from heat_transfer.config.models import FirePass, SmokePass, Reversal, Economiser, GasStream, WaterStream
 import math
 import copy
+from common.units import ureg, Q_
 
 class StageSolver:
 
@@ -12,7 +13,12 @@ class StageSolver:
         self.water = water
         self.qprime = None
 
-    def iterate_wall_temperature(self, *, guess: Optional[float] = None, rtol: float = 1e-4, atol_T: float = 1e-3, atol_q: float = 1e-3, max_iter: int = 50, omega: float = 0.5,) -> Dict[str, Any]:
+    def update_walls(self, qprime):
+            Twi = self.gas.temperature - ( qprime / (self.gas.htc * self.stage.hot_side.inner_perimeter) )
+            Two = Twi - (qprime * self.stage.hot_side.wall.thickness) / (self.stage.hot_side.wall.conductivity * self.stage.hot_side.outer_perimeter)
+            return {"Twi": Twi, "Two": Two}
+
+    def iterate_wall_temperature(self, *, guess: Optional[Q_] = None, rtol: float = 1e-4, atol_T: Q_ = (1e-3 * ureg.kelvin), atol_q: Q_ = (1e-3 * ureg.watt/ureg.meter), max_iter: int = 50, omega: float = 0.5,) -> Dict[str, Any]:
 
         Twi = (
             guess
@@ -20,7 +26,12 @@ class StageSolver:
             or 0.5 * (self.gas.temperature + self.water.temperature)
         )
 
-        Two = getattr(self.water, "wall_temperature", None)        
+        Two = (
+            guess
+            or getattr(self.water, "wall_temperature", None)
+            or 0.5 * (self.gas.temperature + self.water.temperature)
+        )               
+        
         qprime = None
 
         for k in range(1, max_iter + 1):
@@ -31,14 +42,14 @@ class StageSolver:
             
             walls = self.gas.update_walls(qprime_new)
             Twi_new = walls["Twi"]
-            Two_new = walls.get("Two")
+            Two_new = walls["Two"]
 
-            conv_Twi = abs(Twi_new - Twi) <= max(atol_T, rtol * max(abs(Twi_new), 1.0))
+            conv_Twi = abs(Twi_new - Twi) <= max(atol_T, rtol * max(abs(Twi_new), (1.0 * ureg.kelvin)))
             conv_qprime = (qprime is not None) and (
-                abs(qprime_new - qprime) <= max(atol_q, rtol * max(abs(qprime_new), 1.0))
+                abs(qprime_new - qprime) <= max(atol_q, rtol * max(abs(qprime_new), (1.0 * ureg.watt/ureg.meter)))
             )
             conv_Two = (Two is not None and Two_new is not None) and (
-                abs(Two_new - Two) <= max(atol_T, rtol * max(abs(Two_new), 1.0))
+                abs(Two_new - Two) <= max(atol_T, rtol * max(abs(Two_new), (1.0 * ureg.kelvin)))
             )            
 
             if conv_Twi and conv_qprime and (conv_Two or Two_new is None):
@@ -79,12 +90,11 @@ class StageSolver:
 
         return {"dTgdx": dTgdx, "dhwdx": dhwdx, "dpgdx": dpgdx}
 
-    def solve(self, dx_init: float = 0.1, tol_T: float = 2.0):
-        nsteps = int(math.ceil(self.stage.hot_side.inner_length / dx))
+    def solve(self, dx_init: Q_ = (0.01 * ureg.meter), tol_T: Q_ = (2.0 * ureg.kelvin)):
         dx = dx_init
         gas_list = []
         water_list = []
-
+        x = 0.0
         while x < self.stage.hot_side.inner_length:
             res = self.iterate_wall_temperature()
             if not res["converged"]:
@@ -93,7 +103,7 @@ class StageSolver:
             gas_list.append(copy.deepcopy(self.gas))
             water_list.append(copy.deepcopy(self.water))
 
-            derivs = self._rhs(qprime=res["qprime"])
+            derivs = self._rhs()
 
             dT_est = abs(derivs["dTgdx"]) * dx
             if dT_est > tol_T:      # too large, cut step

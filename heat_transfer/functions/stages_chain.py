@@ -12,6 +12,8 @@ class six_stage_counterflow:
         water_hist: List[WaterStream] = []
 
         for stage in self.stages:
+            gas.stage = stage
+            water.stage = stage
             solver = StageSolver(stage=stage, gas=gas, water=water)
             g_list, w_list = solver.solve()  # uses your earlier solve() that returns lists of instances
             gas_hist.extend(copy.deepcopy(g_list))

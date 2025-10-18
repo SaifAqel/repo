@@ -10,8 +10,7 @@ class HeatRate:
         self.water = water
 
     def gas_resistance_per_length(self) -> Q_:
-        h = self.gas.radiation_coefficient + self.gas.convective_coefficient
-        return 1 / ( h * self.stage.hot_side.inner_perimeter )
+        return 1 / ( self.gas.htc * self.stage.hot_side.inner_perimeter )
     
     def inner_fouling_resistance_per_length(self) -> Q_:
         return self.stage.hot_side.wall.surfaces.inner.fouling_thickness / ( self.stage.hot_side.wall.surfaces.inner.fouling_conductivity * self.stage.hot_side.inner_perimeter )
@@ -23,8 +22,11 @@ class HeatRate:
         return self.stage.hot_side.wall.surfaces.outer.fouling_thickness / ( self.stage.hot_side.wall.surfaces.outer.fouling_conductivity * self.stage.hot_side.outer_perimeter )
     
     def water_resistance_per_length(self) -> Q_:
-        return 1 / ( self.stage.hot_side.outer_perimeter * WaterHTC(self).calc_htc() )
-
+        return 1 / (
+            self.stage.hot_side.outer_perimeter *
+            WaterHTC(stage=self.stage, water=self.water, gas=self.gas).calc_htc()
+        )
+    
     def total_resistance_per_length(self) -> Q_:
         return ( 
             self.gas_resistance_per_length() 

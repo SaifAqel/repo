@@ -8,7 +8,7 @@ from common.units import ureg, Q_
 from heat_transfer.config.models import (Wall, Surface, Surfaces, Nozzle, TubeGeometry, ReversalGeometry,
                                          Nozzles, ShellGeometry, FirePass, SmokePass, Reversal, BankGeometry,
                                          Economiser, Stages, GasStream, WaterStream, GasProps, WaterProps,
-                                         EconomiserHot, EconomiserCold)
+                                         EconomiserHot, EconomiserCold, Drum)
 
 class ConfigLoader:
     @staticmethod
@@ -162,6 +162,12 @@ class ConfigLoader:
         )
 
     @classmethod
+    def _build_drum(cls, node:Dict[str, Any]) -> Drum:
+        return Drum(
+            flow_area=cls._qty(node["flow_area"])
+        )
+
+    @classmethod
     def _build_gas_stream(cls, node: Dict[str, Any]) -> GasStream:
         composition = {k: cls._qty(v) for k, v in node.get("composition", {}).items()}
         spectro = {k: cls._qty(v) for k, v in node.get("spectroscopic_data", {}).items()}
@@ -184,6 +190,7 @@ class ConfigLoader:
             pressure=cls._qty(node["pressure"]),
             composition=composition,
             stage=None,
+            drum=cls._build_drum(node["drum"]),
             water_props=WaterProps
         )
 
