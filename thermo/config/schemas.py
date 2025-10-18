@@ -2,24 +2,24 @@ from dataclasses import dataclass
 from typing import Dict
 import tomllib, pathlib
 from common.units import ureg, Q_
-import pint
+
 
 @dataclass(frozen=True)
 class Settings:
-    species_molar_masses: Dict[str, pint.Quantity]
+    species_molar_masses: Dict[str, Q_]
     species_cp_fluids_map: Dict[str, str]
-    formation_enthalpies: Dict[str, pint.Quantity]
-    latent_heat_H2O: pint.Quantity
+    formation_enthalpies: Dict[str, Q_]
+    latent_heat_H2O: Q_
     stoich_O2_per_mol: Dict[str, float]
     air_composition_mol: Dict[str, float]
-    air_T: pint.Quantity
-    air_P: pint.Quantity
+    air_T: Q_
+    air_P: Q_
     fuel_composition_mass: Dict[str, float]
-    fuel_T: pint.Quantity
-    fuel_P: pint.Quantity
-    fuel_mass_flow: pint.Quantity
-    T_ref: pint.Quantity
-    ambient_T: pint.Quantity
+    fuel_T: Q_
+    fuel_P: Q_
+    fuel_mass_flow: Q_
+    T_ref: Q_
+    ambient_T: Q_
     excess_air_ratio: float
 
 def load_settings(path: str) -> Settings:

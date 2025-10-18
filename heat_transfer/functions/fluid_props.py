@@ -1,3 +1,4 @@
+from __future__ import annotations  # at top of every module
 from common.units import Q_, Converter
 import cantera as ct
 from iapws import IAPWS97

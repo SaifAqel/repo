@@ -94,13 +94,10 @@ class Results:
     # ---- helpers ----
     @staticmethod
     def _mag(x: Any) -> float:
-        """Return magnitude for pint quantities or pass through floats."""
         try:
-            # pint Quantity
             return x.m
         except Exception:
             try:
-                # pint Quantity with .to_base_units().m if dimensionless with units
                 return float(x)
             except Exception:
                 return x  # let formatting fail loudly for unsupported types
@@ -119,7 +116,7 @@ class Results:
 
     def _fmt_frac_dict(self, d: Dict[str, Any], percent_dec: int) -> list[str]:
         rows = []
-        # Accept floats or dimensionless pint quantities
+        # Accept floats or dimensionless  quantities
         for k, v in sorted(d.items()):
             mag = self._mag(v)
             pct = mag * 100.0

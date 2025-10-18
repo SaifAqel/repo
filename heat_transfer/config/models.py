@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Literal
+from typing import Dict, Callable
 from common.units import ureg, Q_
 from math import exp, log10, pi
 from heat_transfer.functions.fluid_props import WaterProps, GasProps
@@ -335,13 +335,9 @@ class GasStream:
 
 @dataclass
 class Film:
-    bulk: WaterStream
+    film_temperature: Callable[[], Q_]
 
     ######################### Properties #########################
-    @property
-    def temperature(self) -> Q_:
-        return (self.bulk.wall_temperature + self.bulk.temperature) / 2
-    
     @property
     def quality(self) -> Q_:
         return WaterProps.quality_from_h(self)
@@ -389,7 +385,6 @@ class WaterStream:
     composition: Dict[str, Q_]
     drum: Drum
     stage: FirePass | SmokePass | Reversal | Economiser
-    film: Q_
     wall_temperature: Q_ | None = None  # Two
     q_flux: Q_ | None = None
 
@@ -422,6 +417,15 @@ class WaterStream:
     def molecular_weight(self) -> Q_:
         return Q_(18.0, "kg/kmol")
     
+    ######################### Film #########################
+    @property
+    def film_temperature(self) -> Q_:
+        return (self.wall_temperature + self.temperature) / 2
+    
+    @property
+    def film(self) -> Film:
+        return Film(film_temperature=self.film_temperature)
+
     ######################### Saturation Properties #########################
     @property
     def saturation_temperature(self) -> Q_:

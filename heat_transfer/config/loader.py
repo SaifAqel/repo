@@ -178,7 +178,6 @@ class ConfigLoader:
             composition=composition,
             spectroscopic_data=spectro,
             stage= None,
-            gas_props=GasProps
         )
 
     @classmethod
@@ -191,7 +190,6 @@ class ConfigLoader:
             composition=composition,
             stage=None,
             drum=cls._build_drum(node["drum"]),
-            water_props=WaterProps
         )
 
     @classmethod
