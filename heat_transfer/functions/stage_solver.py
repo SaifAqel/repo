@@ -2,10 +2,11 @@ from typing import Callable, Dict, List, Any, Optional
 from heat_transfer.functions.heat_rate import HeatRate
 from heat_transfer.config.models import FirePass, SmokePass, Reversal, Economiser, GasStream, WaterStream
 import math
+import copy
 
-class stage_solver:
+class StageSolver:
 
-    def __init__(self, stage: FirePass | SmokePass | Reversal, gas: GasStream, water: WaterStream):
+    def __init__(self, stage: FirePass | SmokePass | Reversal | Economiser, gas: GasStream, water: WaterStream):
         self.stage = stage
         self.gas = gas
         self.water = water
@@ -70,7 +71,6 @@ class stage_solver:
             "qprime": qprime,
         }
 
-    # ---- ODE RHS using current state and inner wall iteration ----
     def _rhs(self) -> Dict[str, float]:
 
         dTgdx = - self.qprime / (self.gas.mass_flow_rate * self.gas.specific_heat)
@@ -78,3 +78,34 @@ class stage_solver:
         dpgdx = - self.gas.friction_factor * self.gas.mass_flow_rate**2 / (2.0 * self.stage.hot_side.hydraulic_diameter * self.stage.hot_side.flow_area**2 * self.gas.density)
 
         return {"dTgdx": dTgdx, "dhwdx": dhwdx, "dpgdx": dpgdx}
+
+    def solve(self, dx_init: float = 0.1, tol_T: float = 2.0):
+        nsteps = int(math.ceil(self.stage.hot_side.inner_length / dx))
+        dx = dx_init
+        gas_list = []
+        water_list = []
+
+        while x < self.stage.hot_side.inner_length:
+            res = self.iterate_wall_temperature()
+            if not res["converged"]:
+                raise RuntimeError("Wall iteration failed")
+
+            gas_list.append(copy.deepcopy(self.gas))
+            water_list.append(copy.deepcopy(self.water))
+
+            derivs = self._rhs(qprime=res["qprime"])
+
+            dT_est = abs(derivs["dTgdx"]) * dx
+            if dT_est > tol_T:      # too large, cut step
+                dx *= 0.5
+                continue
+            if dT_est < 0.25 * tol_T:  # safe, enlarge step
+                dx *= 1.2
+
+            self.gas.temperature += derivs["dTgdx"] * dx
+            self.gas.pressure    += derivs["dpgdx"] * dx
+            self.water.enthalpy  += derivs["dhwdx"] * dx
+
+            x += dx
+
+        return gas_list, water_list
