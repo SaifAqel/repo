@@ -43,12 +43,6 @@ class GasProps:
 class WaterProps:
     ######################### Functions ######################### 
     @staticmethod
-    def enthalpy_from_temperature(water) -> Q_:
-        P = Converter._MPa(water.pressure).magnitude
-        T = Converter._K(water.temperature).magnitude
-        return Q_(IAPWS97(P=P, T=T).h, "kJ/kg")
-
-    @staticmethod
     def sat_liq(water) -> IAPWS97:
         P = Converter._MPa(water.pressure).magnitude
         return IAPWS97(P=P, x=0.0)

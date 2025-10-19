@@ -444,16 +444,16 @@ class Film:
         return (self.bulk.wall_temperature + self.bulk.temperature) / 2
     
     @property
+    def enthalpy(self) -> Q_:
+        return self.bulk.enthalpy + self.bulk.specific_heat * ( self.temperature - self.bulk.temperature)
+    
+    @property
     def pressure(self) -> Q_:
         return self.bulk.pressure
 
     @property
     def composition(self):
         return self.bulk.composition
-
-    @property
-    def enthalpy(self) -> Q_:
-        return WaterProps.enthalpy_from_temperature(self)
 
     @property
     def density(self) -> Q_:
