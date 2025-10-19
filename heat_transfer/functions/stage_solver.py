@@ -1,7 +1,7 @@
 from typing import Callable, Dict, List, Any, Optional
 from heat_transfer.functions.heat_rate import HeatRate
 from heat_transfer.config.models import FirePass, SmokePass, Reversal, Economiser, GasStream, WaterStream
-import math
+from math import pi, log
 import copy
 from common.units import ureg, Q_
 
@@ -15,7 +15,7 @@ class StageSolver:
 
     def update_walls(self, qprime):
             Twi = self.gas.temperature - ( qprime / (self.gas.htc * self.stage.hot_side.inner_perimeter) )
-            Two = Twi - (qprime * self.stage.hot_side.wall.thickness) / (self.stage.hot_side.wall.conductivity * self.stage.hot_side.outer_perimeter)
+            Two = Twi - qprime / (2 * pi * self.stage.hot_side.wall.conductivity) * log(self.stage.hot_side.outer_diameter / self.stage.hot_side.inner_diameter)
             return {"Twi": Twi, "Two": Two}
 
     def iterate_wall_temperature(self, *, guess: Optional[Q_] = None, rtol: float = 1e-4, atol_T: Q_ = (1e-3 * ureg.kelvin), atol_q: Q_ = (1e-3 * ureg.watt/ureg.meter), max_iter: int = 50, omega: float = 0.5,) -> Dict[str, Any]:

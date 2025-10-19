@@ -44,7 +44,7 @@ class WaterHTC:
         elif zone == "reversal":
             Nu_cb = WaterHTC.Nu_churchill_bernstein(water)
             De = water.film.reynolds_number * (water.stage.hot_side.inner_diameter / (2 * water.stage.hot_side.curvature_radius))
-            return Nu_cb * (1 + 0.15 * (De ** 0.5))
+            return Nu_cb * (1 + 0.15 * (De.magnitude ** 0.5))
         elif zone == "economiser":
             return WaterHTC.Nu_sieder_tate(water)
         else:
@@ -64,6 +64,8 @@ class WaterHTC:
 
     def calc_htc(water):
         if water.enthalpy < water.liquid_saturation_enthalpy:
+            return WaterHTC.htc_conv(water)
+        elif water.enthalpy > (water.liquid_saturation_enthalpy + water.latent_heat_of_vaporization):
             return WaterHTC.htc_conv(water)
         else:
             return ( water.S_factor * WaterHTC.htc_conv(water) ) + ( water.F_factor * WaterHTC.htc_nb(water) )

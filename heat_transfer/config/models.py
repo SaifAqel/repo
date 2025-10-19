@@ -125,11 +125,11 @@ class BankGeometry:
     
     @property
     def inner_perimeter(self) -> Q_:
-        return pi * self.inner_diameter
+        return pi * self.inner_diameter * self.tubes_number
     
     @property
     def outer_perimeter(self) -> Q_:
-        return pi * self.outer_diameter
+        return pi * self.outer_diameter * self.tubes_number
 
     @property
     def hydraulic_diameter(self) -> Q_:
