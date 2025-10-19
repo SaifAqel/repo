@@ -43,6 +43,12 @@ class GasProps:
 class WaterProps:
     ######################### Functions ######################### 
     @staticmethod
+    def enthalpy_from_temperature(water) -> Q_:
+        P = Converter._MPa(water.pressure).magnitude
+        T = Converter._K(water.temperature).magnitude
+        return Q_(IAPWS97(P=P, T=T).h, "kJ/kg")
+
+    @staticmethod
     def sat_liq(water) -> IAPWS97:
         P = Converter._MPa(water.pressure).magnitude
         return IAPWS97(P=P, x=0.0)
@@ -55,17 +61,14 @@ class WaterProps:
     @staticmethod
     def _state(water) -> IAPWS97:
         P = Converter._MPa(water.pressure).magnitude
-        T = getattr(water, "temperature", None)
         h = getattr(water, "enthalpy", None)
         x = getattr(water, "quality", None)
 
         if x is not None:
             return IAPWS97(P=P, x=Converter._dim(x).magnitude)
-        if T is not None:
-            return IAPWS97(P=P, T=Converter._K(T).magnitude)
         if h is not None:
             return IAPWS97(P=P, h=Converter._kJkg(h).magnitude)
-        raise ValueError("Provide one of: temperature, enthalpy, or quality.")
+        raise ValueError("Provide one of: enthalpy, or quality.")
 
     ######################### Saturation Properties #########################
     @staticmethod

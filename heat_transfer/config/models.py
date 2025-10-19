@@ -314,7 +314,7 @@ class GasStream:
     
     @property
     def film_temperature(self) -> Q_:
-        return (self.T_wall + self.temperature) / 2
+        return (self.wall_temperature + self.temperature) / 2
     
     @property
     def radiation_coefficient(self) -> Q_:
@@ -331,50 +331,6 @@ class GasStream:
     def friction_factor(self) -> float:
         f = ( -1.8*log10( (self.stage.hot_side.rel_roughness.magnitude/3.7)**1.11 + 6.9/self.reynolds_number.magnitude ) )**-2
         return f
-    
-
-@dataclass
-class Film:
-    film_temperature: Callable[[], Q_]
-
-    ######################### Properties #########################
-    @property
-    def quality(self) -> Q_:
-        return WaterProps.quality_from_h(self)
-    
-    @property
-    def density(self) -> Q_:
-        return WaterProps.density(self)
-    
-    @property
-    def specific_heat(self) -> Q_:
-        return WaterProps.specific_heat_cp(self)
-    
-    @property
-    def thermal_conductivity(self) -> Q_:
-        return WaterProps.thermal_conductivity(self)
-    
-    @property
-    def dynamic_viscosity(self) -> Q_:
-        return WaterProps.dynamic_viscosity(self)
-    
-    ######################### Flow #########################
-    @property
-    def prandtl_number(self) -> Q_:
-        return self.dynamic_viscosity * self.specific_heat / self.thermal_conductivity
-    
-    @property
-    def velocity(self) -> Q_:
-        return self.bulk.mass_flow_rate / (self.bulk.stage.cold_side.flow_area * self.density)
-    
-    @property
-    def reynolds_number(self) -> Q_:
-        return   self.density * self.velocity * self.bulk.stage.cold_side.hydraulic_diameter / self.dynamic_viscosity
-    
-    @property
-    def reynolds_gap(self) -> Q_:
-        gap_velocity = self.velocity * self.bulk.stage.hot_side.pitch / (self.bulk.stage.hot_side.pitch - self.bulk.stage.hot_side.outer_diameter)
-        return self.density * gap_velocity * self.bulk.stage.hot_side.outer_diameter / self.dynamic_viscosity
 
 
 @dataclass
@@ -388,7 +344,7 @@ class WaterStream:
     wall_temperature: Q_ | None = None  # Two
     q_flux: Q_ | None = None
 
-    ######################### properties #########################
+    # --- properties ---
     @property
     def quality(self) -> Q_:
         return WaterProps.quality_from_h(self)
@@ -417,16 +373,12 @@ class WaterStream:
     def molecular_weight(self) -> Q_:
         return Q_(18.0, "kg/kmol")
     
-    ######################### Film #########################
-    @property
-    def film_temperature(self) -> Q_:
-        return (self.wall_temperature + self.temperature) / 2
-    
+    # --- Film ---
     @property
     def film(self) -> Film:
-        return Film(film_temperature=self.film_temperature)
+        return Film(bulk=self)
 
-    ######################### Saturation Properties #########################
+    # --- Saturation Properties ---
     @property
     def saturation_temperature(self) -> Q_:
         return WaterProps.saturation_temperature(self)
@@ -443,7 +395,7 @@ class WaterStream:
     def surface_tension(self) -> Q_:
         return WaterProps.surface_tension(self)
 
-    ######################### Flow #########################
+    # --- Flow ---
     @property
     def prandtl_number(self) -> Q_:
         return self.dynamic_viscosity * self.specific_heat / self.thermal_conductivity
@@ -465,14 +417,14 @@ class WaterStream:
     def mass_flux(self) -> Q_:
         return self.mass_flow_rate / self.drum.flow_area
 
-    ######################### Two-Phase #########################
+    # --- Two-Phase ---
     @property
     def Re_lo(self):
-        return self.mass_flux * (1 - self.quality) * self.stage.cold_side.hydraulic_diameter / WaterProps.dynamic_viscosity(self, 0)
+        return (self.mass_flux * (1 - self.quality) * self.stage.cold_side.hydraulic_diameter / WaterProps.sat_liq(self).mu).to_base_units().magnitude
     
     @property
     def xtt(self):
-        return ((1 - self.quality) / self.quality) ** 0.9 * (WaterProps.density(self, 1) / WaterProps.density(self, 0)) ** 0.5 * (WaterProps.dynamic_viscosity(self, 0) / WaterProps.dynamic_viscosity(self, 1)) ** 0.1
+        return ((1 - self.quality) / self.quality) ** 0.9 * (WaterProps.sat_vap(self).rho / WaterProps.sat_liq(self).rho) ** 0.5 * (WaterProps.sat_liq(self).mu / WaterProps.sat_vap(self).mu) ** 0.1
     
     @property
     def F_factor(self):
@@ -481,3 +433,63 @@ class WaterStream:
     @property
     def S_factor(self):
         return 1 / (1 + 2.53e-6 * self.Re_lo ** 1.17)
+    
+@dataclass
+class Film:
+    bulk: "WaterStream"
+
+    # --- Properties ---
+    @property
+    def temperature(self) -> Q_:
+        return (self.bulk.wall_temperature + self.bulk.temperature) / 2
+    
+    @property
+    def pressure(self) -> Q_:
+        return self.bulk.pressure
+
+    @property
+    def composition(self):
+        return self.bulk.composition
+
+    @property
+    def enthalpy(self) -> Q_:
+        return WaterProps.enthalpy_from_temperature(self)
+
+    @property
+    def density(self) -> Q_:
+        return WaterProps.density(self)
+
+    @property
+    def specific_heat(self) -> Q_:
+        return WaterProps.specific_heat_cp(self)
+
+    @property
+    def thermal_conductivity(self) -> Q_:
+        return WaterProps.thermal_conductivity(self)
+
+    @property
+    def dynamic_viscosity(self) -> Q_:
+        return WaterProps.dynamic_viscosity(self)
+
+    # --- Flow ---
+    @property
+    def prandtl_number(self) -> Q_:
+        return self.dynamic_viscosity * self.specific_heat / self.thermal_conductivity
+
+    @property
+    def velocity(self) -> Q_:
+        return self.bulk.velocity
+
+    @property
+    def hydraulic_diameter(self) -> Q_:
+        return self.bulk.stage.cold_side.hydraulic_diameter
+
+    @property
+    def reynolds_number(self) -> Q_:
+        return self.density * self.velocity * self.hydraulic_diameter / self.dynamic_viscosity
+
+    @property
+    def reynolds_gap(self) -> Q_:
+        hs = self.bulk.stage.hot_side
+        gap_velocity = self.velocity * hs.pitch / (hs.pitch - hs.outer_diameter)
+        return self.density * gap_velocity * hs.outer_diameter / self.dynamic_viscosity

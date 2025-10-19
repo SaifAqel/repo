@@ -30,19 +30,18 @@ class StageSolver:
             guess
             or getattr(self.water, "wall_temperature", None)
             or 0.5 * (self.gas.temperature + self.water.temperature)
-        )               
-        
-        qprime = None
+        )             
 
+        qprime = self.qprime  
+        
         for k in range(1, max_iter + 1):
             self.gas.wall_temperature = Twi
             self.water.wall_temperature = Two
-
+            self.qprime = qprime
             qprime_new = HeatRate(self.stage, self.gas, self.water).heat_rate_per_length()
             
-            walls = self.gas.update_walls(qprime_new)
-            Twi_new = walls["Twi"]
-            Two_new = walls["Two"]
+            Twi_new = self.gas.temperature - qprime_new / (self.gas.htc * self.stage.hot_side.inner_perimeter)
+            Two_new = Twi - qprime_new * self.stage.hot_side.wall.thickness / (self.stage.hot_side.wall.conductivity * self.stage.hot_side.outer_perimeter)
 
             conv_Twi = abs(Twi_new - Twi) <= max(atol_T, rtol * max(abs(Twi_new), (1.0 * ureg.kelvin)))
             conv_qprime = (qprime is not None) and (
