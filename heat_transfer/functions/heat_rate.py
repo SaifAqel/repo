@@ -26,7 +26,7 @@ class HeatRate:
         if qprime is None:
             h = WaterHTC.htc_conv(self.water)
         else:
-            self.q_flux = qprime / self.stage.hot_side.outer_perimeter
+            self.water.q_flux = qprime / self.stage.hot_side.outer_perimeter
             h = WaterHTC.calc_htc(self.water)
         return 1 / (h * self.stage.hot_side.outer_perimeter)
     

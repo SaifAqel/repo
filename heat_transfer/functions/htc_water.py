@@ -59,7 +59,7 @@ class WaterHTC:
     def htc_nb(water):
         p_crit = Q_(22.064e6, "Pa") 
         h_nb = 55 * ((water.pressure / p_crit).magnitude ** -0.12) * (water.molecular_weight.magnitude ** -0.5) * (water.q_flux.magnitude ** 0.67)
-        return h_nb
+        return Q_(h_nb, "W/(m^2*K)")
 
 
     def calc_htc(water):

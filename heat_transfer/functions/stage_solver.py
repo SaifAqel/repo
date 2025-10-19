@@ -41,7 +41,7 @@ class StageSolver:
             qprime_new = HeatRate(self.stage, self.gas, self.water).heat_rate_per_length()
             
             Twi_new = self.gas.temperature - qprime_new / (self.gas.htc * self.stage.hot_side.inner_perimeter)
-            Two_new = Twi - qprime_new * self.stage.hot_side.wall.thickness / (self.stage.hot_side.wall.conductivity * self.stage.hot_side.outer_perimeter)
+            Two_new = Twi_new - qprime_new * self.stage.hot_side.wall.thickness / (self.stage.hot_side.wall.conductivity * self.stage.hot_side.outer_perimeter)
 
             conv_Twi = abs(Twi_new - Twi) <= max(atol_T, rtol * max(abs(Twi_new), (1.0 * ureg.kelvin)))
             conv_qprime = (qprime is not None) and (
@@ -93,7 +93,7 @@ class StageSolver:
         dx = dx_init
         gas_list = []
         water_list = []
-        x = 0.0
+        x = 0.0 * ureg.meter
         while x < self.stage.hot_side.inner_length:
             res = self.iterate_wall_temperature()
             if not res["converged"]:
